@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import type { Database } from '@/lib/types/database'
 
-interface AccountRow {
+type AccountRow = Database['public']['Tables']['accounts']['Row']
+type HoldingRow = Database['public']['Tables']['holdings']['Row']
+
+interface AccountRowDisplay {
   id: string
   name: string
   type: string
@@ -14,7 +18,7 @@ interface AccountRow {
 
 interface PortfolioState {
   total: number
-  accounts: AccountRow[]
+  accounts: AccountRowDisplay[]
   loading: boolean
 }
 
@@ -30,7 +34,7 @@ function fmt(n: number) {
   return '$' + Math.round(n).toLocaleString('en-US')
 }
 
-function DonutChart({ accounts, total }: { accounts: AccountRow[]; total: number }) {
+function DonutChart({ accounts, total }: { accounts: AccountRowDisplay[]; total: number }) {
   useEffect(() => {
     const canvas = document.getElementById('portfolio-donut') as HTMLCanvasElement | null
     if (!canvas || accounts.length === 0) return
@@ -86,11 +90,16 @@ export default function PortfolioCard({ userId }: { userId: string }) {
 
   useEffect(() => {
     async function load() {
-      const { data: accts } = await supabase
+      type AcctPick = Pick<AccountRow, 'id' | 'slug' | 'name' | 'type' | 'color'>
+      type HoldingPick = Pick<HoldingRow, 'account_id' | 'ticker' | 'shares' | 'cost_per_share' | 'coingecko_id'>
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const db = supabase as any
+      const { data: accts } = await db
         .from('accounts')
         .select('id, slug, name, type, color')
         .eq('user_id', userId)
-        .order('display_order')
+        .order('display_order') as { data: AcctPick[] | null }
 
       if (!accts || accts.length === 0) {
         setState({ total: 0, accounts: [], loading: false })
@@ -98,12 +107,12 @@ export default function PortfolioCard({ userId }: { userId: string }) {
       }
 
       const acctIds = accts.map(a => a.id)
-      const { data: holdingsData } = await supabase
+      const { data: holdingsData } = await db
         .from('holdings')
         .select('account_id, ticker, shares, cost_per_share, coingecko_id')
-        .in('account_id', acctIds)
+        .in('account_id', acctIds) as { data: HoldingPick[] | null }
 
-      const holdingsByAccount: Record<string, typeof holdingsData> = {}
+      const holdingsByAccount: Record<string, HoldingPick[]> = {}
       for (const h of holdingsData ?? []) {
         if (!holdingsByAccount[h.account_id]) holdingsByAccount[h.account_id] = []
         holdingsByAccount[h.account_id]!.push(h)
@@ -119,7 +128,7 @@ export default function PortfolioCard({ userId }: { userId: string }) {
         if (res.ok) prices = await res.json()
       } catch {}
 
-      const rows: AccountRow[] = accts.map(a => {
+      const rows: AccountRowDisplay[] = accts.map(a => {
         const holdings = holdingsByAccount[a.id] ?? []
         const value = holdings.reduce((sum: number, h) => {
           const price = prices[h.ticker] ?? 0
@@ -130,7 +139,7 @@ export default function PortfolioCard({ userId }: { userId: string }) {
           name: a.name,
           type: a.type,
           value,
-          color: ACCOUNT_COLORS[a.slug] ?? a.color,
+          color: ACCOUNT_COLORS[a.slug] ?? a.color ?? '#888',
           pct: 0,
         }
       })

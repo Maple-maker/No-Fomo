@@ -24,6 +24,8 @@ export default function TodosCard({ initialTodos, userId }: TodosCardProps) {
   const [draft, setDraft] = useState('')
   const [, startTransition] = useTransition()
   const supabase = createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any
 
   async function addTodo() {
     const text = draft.trim()
@@ -43,11 +45,11 @@ export default function TodosCard({ initialTodos, userId }: TodosCardProps) {
     }
     setTodos(prev => [optimistic, ...prev])
 
-    const { data } = await supabase
+    const { data } = await db
       .from('todos')
       .insert({ user_id: userId, text, source: 'manual' })
       .select()
-      .single()
+      .single() as { data: Todo | null }
 
     if (data) {
       setTodos(prev => prev.map(t => t.id === optimistic.id ? data : t))
@@ -57,7 +59,7 @@ export default function TodosCard({ initialTodos, userId }: TodosCardProps) {
   async function completeTodo(id: string) {
     setTodos(prev => prev.filter(t => t.id !== id))
     startTransition(async () => {
-      await supabase
+      await db
         .from('todos')
         .update({ done: true, completed_at: new Date().toISOString() })
         .eq('id', id)
@@ -84,7 +86,7 @@ export default function TodosCard({ initialTodos, userId }: TodosCardProps) {
 
       {/* Todo list */}
       <div className="flex flex-col divide-y overflow-y-auto max-h-96"
-        style={{ divideColor: 'var(--border)' }}>
+        style={{ borderColor: 'var(--border)' }}>
         {todos.length === 0 && (
           <p className="px-5 py-8 text-sm text-center" style={{ color: 'var(--text-4)' }}>
             Nothing pending — clean slate.
