@@ -88,7 +88,7 @@ export default function PortfolioCard({ userId }: { userId: string }) {
     async function load() {
       const { data: accts } = await supabase
         .from('accounts')
-        .select('id, slug, name, type, color, holdings(ticker, shares, cost_per_share, coingecko_id)')
+        .select('id, slug, name, type, color')
         .eq('user_id', userId)
         .order('display_order')
 
@@ -97,10 +97,20 @@ export default function PortfolioCard({ userId }: { userId: string }) {
         return
       }
 
+      const acctIds = accts.map(a => a.id)
+      const { data: holdingsData } = await supabase
+        .from('holdings')
+        .select('account_id, ticker, shares, cost_per_share, coingecko_id')
+        .in('account_id', acctIds)
+
+      const holdingsByAccount: Record<string, typeof holdingsData> = {}
+      for (const h of holdingsData ?? []) {
+        if (!holdingsByAccount[h.account_id]) holdingsByAccount[h.account_id] = []
+        holdingsByAccount[h.account_id]!.push(h)
+      }
+
       // Collect tickers for price fetch
-      const tickers = [...new Set(
-        accts.flatMap(a => (a.holdings as any[]).map((h: any) => h.ticker))
-      )]
+      const tickers = [...new Set((holdingsData ?? []).map(h => h.ticker))]
 
       // Fetch prices from our API route
       let prices: Record<string, number> = {}
@@ -110,7 +120,8 @@ export default function PortfolioCard({ userId }: { userId: string }) {
       } catch {}
 
       const rows: AccountRow[] = accts.map(a => {
-        const value = (a.holdings as any[]).reduce((sum: number, h: any) => {
+        const holdings = holdingsByAccount[a.id] ?? []
+        const value = holdings.reduce((sum: number, h) => {
           const price = prices[h.ticker] ?? 0
           return sum + (h.shares ?? 0) * price
         }, 0)

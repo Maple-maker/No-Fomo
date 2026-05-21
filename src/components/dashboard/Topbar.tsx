@@ -69,7 +69,7 @@ export default function Topbar({ userName, avatarUrl, timezone }: TopbarProps) {
         </button>
         {avatarUrl ? (
           <Image src={avatarUrl} alt={userName} width={28} height={28}
-            className="rounded-full ring-1" style={{ ringColor: 'var(--border-2)' }} />
+            className="rounded-full" style={{ outline: '1px solid var(--border-2)' }} />
         ) : (
           <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
             style={{ background: 'var(--signal)', color: 'var(--bg)' }}>
