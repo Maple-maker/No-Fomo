@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg:           #0a0b0d;
+  --color-surface:      #111318;
+  --color-surface-2:    #161a22;
+  --color-surface-3:    #1d2330;
+  --color-border:       rgba(255,255,255,0.06);
+  --color-border-2:     rgba(255,255,255,0.10);
+  --color-text:         #e8eaf0;
+  --color-text-2:       #9fa8b8;
+  --color-text-3:       #5a6478;
+  --color-text-4:       #3d4558;
+  --color-positive:     #5fcb95;
+  --color-negative:     #e68078;
+  --color-signal:       #6fc8d6;
+  --color-gold:         #d9b36a;
+  --color-violet:       #9b8ce6;
+  --color-orange:       #f0a05a;
+
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+:root {
+  /* Keep CSS vars available for canvas/imperative code */
+  --bg:         #0a0b0d;
+  --surface:    #111318;
+  --surface-2:  #161a22;
+  --surface-3:  #1d2330;
+  --border:     rgba(255,255,255,0.06);
+  --border-2:   rgba(255,255,255,0.10);
+  --text:       #e8eaf0;
+  --text-2:     #9fa8b8;
+  --text-3:     #5a6478;
+  --text-4:     #3d4558;
+  --positive:   #5fcb95;
+  --negative:   #e68078;
+  --signal:     #6fc8d6;
+  --warning:    #d9b36a;
+  --violet:     #9b8ce6;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 2px; }
+
+/* Mono utility */
+.mono { font-family: var(--font-mono); }
