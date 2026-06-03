@@ -2,109 +2,217 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var auth: AuthService
+    @State private var isPro = false
+    @State private var alerts: [String: Bool] = [
+        "t1": true,
+        "triple": true,
+        "council": false,
+        "watch": true,
+    ]
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                DS.Color.background.ignoresSafeArea()
-                List {
-                    // Subscription section
-                    Section {
+        ZStack {
+            DS.Color.background.ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Header
+                    SettingsHeader()
+
+                    VStack(spacing: 18) {
+                        // Subscription card
                         subscriptionCard
-                    }
-                    .listRowBackground(DS.Color.card)
-                    .listRowSeparatorTint(DS.Color.border)
 
-                    Section("Alerts") {
-                        toggle("Tier 1 alerts", icon: "bolt.fill", color: DS.Color.tier1)
-                        toggle("Tier 2 alerts", icon: "bell.fill", color: DS.Color.tier2)
-                        toggle("FDA approvals", icon: "pills.fill", color: DS.Color.bull)
-                        toggle("Gov contracts", icon: "building.columns.fill", color: DS.Color.accent)
-                        toggle("Partnerships", icon: "link", color: DS.Color.neutral)
-                    }
-                    .listRowBackground(DS.Color.card)
-                    .listRowSeparatorTint(DS.Color.border)
+                        // Alerts section
+                        alertsSection
 
-                    Section("About") {
-                        infoRow("Version", value: "1.0.0")
-                        infoRow("Not investment advice", value: "For research only")
-                    }
-                    .listRowBackground(DS.Color.card)
-                    .listRowSeparatorTint(DS.Color.border)
-
-                    Section {
+                        // Sign out
                         Button(action: { auth.signOut() }) {
-                            Text("Sign Out")
+                            Text("Sign out")
+                                .font(.system(size: 15, weight: .medium))
                                 .foregroundColor(DS.Color.bear)
-                                .frame(maxWidth: .infinity, alignment: .center)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 4)
                     }
-                    .listRowBackground(DS.Color.card)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 44)
                 }
-                .scrollContentBackground(.hidden)
-                .navigationTitle("Account")
-                .navigationBarTitleDisplayMode(.large)
-                .toolbarColorScheme(.dark, for: .navigationBar)
             }
         }
     }
 
+    // MARK: Subscription card
     private var subscriptionCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(auth.currentUser?.subscriptionTier.displayName ?? "Free")
-                        .font(DS.Font.displayBold(16))
+        VStack(spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("SUBSCRIPTION")
+                        .font(.system(size: 11))
+                        .foregroundColor(DS.Color.textMuted)
+                        .tracking(0.5)
+                    Text(isPro ? "No Fomo Pro" : "Free tier")
+                        .font(.system(size: 19, weight: .bold))
                         .foregroundColor(.white)
-                    Text(auth.currentUser?.subscriptionTier == .free ? "1 alert/day · 24h delayed" : "Unlimited real-time alerts")
-                        .font(DS.Font.caption(12))
+                    Text(isPro
+                         ? "Full briefs · buy zones · alerts"
+                         : "Buy zones locked · upgrade to unlock")
+                        .font(.system(size: 13))
                         .foregroundColor(DS.Color.textSecondary)
                 }
                 Spacer()
-                if auth.currentUser?.subscriptionTier == .free {
-                    Button(action: {}) {
-                        Text("Upgrade")
-                            .font(DS.Font.caption(12))
-                            .foregroundColor(.black)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(DS.Color.tier1)
-                            .clipShape(Capsule())
-                    }
+                if isPro {
+                    VerdictChip(verdict: .bull, label: "Active")
                 }
             }
-            if auth.currentUser?.subscriptionTier == .free {
-                Text("Pro: $9.99/mo · Annual: $79.99/yr (save 33%)")
-                    .font(DS.Font.caption(11))
-                    .foregroundColor(DS.Color.tier1)
+
+            Button(action: { isPro.toggle() }) {
+                Text(isPro ? "Manage subscription" : "Unlock Pro — $29/mo")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(isPro ? DS.Color.textSecondary : Color(hex: "#06120c"))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 42)
+                    .background(
+                        isPro
+                            ? DS.Color.elevated
+                            : DS.Color.bull
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 11))
             }
         }
+        .padding(16)
+        .background(
+            isPro
+                ? DS.Color.bull.opacity(0.09)
+                : DS.Color.card
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(DS.Color.border, lineWidth: 0.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
-    @State private var alertToggles: [String: Bool] = [:]
+    // MARK: Alerts section
+    private var alertsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("ALERTS")
+                .font(.system(size: 11))
+                .foregroundColor(DS.Color.textMuted)
+                .tracking(0.5)
+                .padding(.horizontal, 4)
 
-    private func toggle(_ label: String, icon: String, color: Color) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundColor(color)
-                .frame(width: 20)
-            Text(label)
-                .foregroundColor(.white)
-                .font(DS.Font.body())
-            Spacer()
-            Toggle("", isOn: Binding(
-                get: { alertToggles[label] ?? true },
-                set: { alertToggles[label] = $0 }
-            ))
-            .tint(DS.Color.bull)
+            VStack(spacing: 0) {
+                AlertToggleRow(
+                    title: "Tier 1 opportunities",
+                    sub: "Push when an exceptional play clears",
+                    isOn: Binding(
+                        get: { alerts["t1"] ?? true },
+                        set: { alerts["t1"] = $0 }
+                    )
+                )
+                alertDivider
+                AlertToggleRow(
+                    title: "Triple Signal alerts",
+                    sub: "Rare — the highest-conviction flag",
+                    isOn: Binding(
+                        get: { alerts["triple"] ?? true },
+                        set: { alerts["triple"] = $0 }
+                    )
+                )
+                alertDivider
+                AlertToggleRow(
+                    title: "Council disagreements",
+                    sub: "When a model breaks from consensus",
+                    isOn: Binding(
+                        get: { alerts["council"] ?? false },
+                        set: { alerts["council"] = $0 }
+                    )
+                )
+                alertDivider
+                AlertToggleRow(
+                    title: "Watchlist buy zones",
+                    sub: "Price enters a tracked buy range",
+                    isOn: Binding(
+                        get: { alerts["watch"] ?? true },
+                        set: { alerts["watch"] = $0 }
+                    )
+                )
+            }
+            .background(DS.Color.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(DS.Color.border, lineWidth: 0.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
     }
 
-    private func infoRow(_ label: String, value: String) -> some View {
+    private var alertDivider: some View {
+        Divider()
+            .background(DS.Color.border)
+            .padding(.leading, 14)
+    }
+}
+
+// MARK: — Settings header
+
+struct SettingsHeader: View {
+    var body: some View {
         HStack {
-            Text(label).foregroundColor(.white).font(DS.Font.body())
+            Text("Account")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundColor(.white)
+                .tracking(-0.5)
             Spacer()
-            Text(value).foregroundColor(DS.Color.textSecondary).font(DS.Font.caption())
+            Circle()
+                .fill(DS.Color.elevated)
+                .frame(width: 34, height: 34)
+                .overlay(
+                    Circle()
+                        .stroke(DS.Color.border, lineWidth: 0.5)
+                )
+                .overlay(
+                    Text("JD")
+                        .font(DS.Font.mono(13))
+                        .foregroundColor(DS.Color.textSecondary)
+                )
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 18)
     }
+}
+
+// MARK: — Alert toggle row
+
+struct AlertToggleRow: View {
+    let title: String
+    let sub: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white)
+                Text(sub)
+                    .font(.system(size: 11.5))
+                    .foregroundColor(DS.Color.textMuted)
+            }
+            Spacer()
+            Toggle("", isOn: $isOn)
+                .tint(DS.Color.bull)
+                .labelsHidden()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+    }
+}
+
+#Preview {
+    SettingsView()
+        .environmentObject(AuthService.shared)
+        .preferredColorScheme(.dark)
 }

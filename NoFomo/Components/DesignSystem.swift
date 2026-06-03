@@ -1,6 +1,7 @@
 import SwiftUI
 
 // MARK: — No Fomo Design System
+// Pixel-matched to the design prototype (No Fomo.html)
 
 enum DS {
 
@@ -8,37 +9,56 @@ enum DS {
     enum Color {
         static let background     = SwiftUI.Color(hex: "#0A0A0F")
         static let card           = SwiftUI.Color(hex: "#12121A")
-        static let cardElevated   = SwiftUI.Color(hex: "#1A1A25")
-        static let border         = SwiftUI.Color(hex: "#2A2A35")
+        static let elevated       = SwiftUI.Color(hex: "#1A1A26")
+        static let ringTrack      = SwiftUI.Color.white.opacity(0.07)
 
-        static let bull           = SwiftUI.Color(hex: "#00FF88")
-        static let bear           = SwiftUI.Color(hex: "#FF3B5C")
-        static let neutral        = SwiftUI.Color(hex: "#FFB800")
+        static let bull           = SwiftUI.Color(hex: "#00FF88")  // electric mint
+        static let bear           = SwiftUI.Color(hex: "#FF3B5C")  // clean red
 
         static let tier1          = SwiftUI.Color(hex: "#FFD700")  // gold
         static let tier2          = SwiftUI.Color(hex: "#00BFFF")  // electric blue
-        static let tier3          = SwiftUI.Color(hex: "#888888")  // gray
+
+        static let accent         = SwiftUI.Color(hex: "#7B61FF")  // purple — AI/intelligence
+        static let neutral        = SwiftUI.Color(hex: "#8888AA")  // deprecated — use contextual colors
 
         static let textPrimary    = SwiftUI.Color.white
-        static let textSecondary  = SwiftUI.Color(hex: "#888888")
-        static let textMuted      = SwiftUI.Color(hex: "#555566")
+        static let textSecondary  = SwiftUI.Color(hex: "#8888AA")
+        static let textMuted      = SwiftUI.Color(hex: "#565676")
 
-        static let accent         = SwiftUI.Color(hex: "#7B61FF")  // purple accent
+        // Borders — barely there, cards defined by depth not lines
+        static let border         = SwiftUI.Color.white.opacity(0.06)
+        static let borderStrong   = SwiftUI.Color.white.opacity(0.14)
     }
 
-    // MARK: Typography
+    // MARK: Typography — system fonts that map to SF Pro / SF Mono on iOS
     enum Font {
-        static func displayBold(_ size: CGFloat) -> SwiftUI.Font { .system(size: size, weight: .bold, design: .default) }
-        static func displayMedium(_ size: CGFloat) -> SwiftUI.Font { .system(size: size, weight: .medium, design: .default) }
-        static func mono(_ size: CGFloat) -> SwiftUI.Font { .system(size: size, weight: .semibold, design: .monospaced) }
-        static func body(_ size: CGFloat = 15) -> SwiftUI.Font { .system(size: size, weight: .regular) }
-        static func caption(_ size: CGFloat = 12) -> SwiftUI.Font { .system(size: size, weight: .medium) }
+        // Display/headlines — geometric sans, bold
+        static func displayBold(_ size: CGFloat) -> SwiftUI.Font {
+            .system(size: size, weight: .bold, design: .default)
+        }
+        // Monospaced for all financial figures — this is data, treat it as data
+        static func mono(_ size: CGFloat) -> SwiftUI.Font {
+            .system(size: size, weight: .semibold, design: .monospaced)
+        }
+        static func monoRegular(_ size: CGFloat) -> SwiftUI.Font {
+            .system(size: size, weight: .regular, design: .monospaced)
+        }
+        // Body — same family, regular weight, readable
+        static func body(_ size: CGFloat = 15) -> SwiftUI.Font {
+            .system(size: size, weight: .regular)
+        }
+        // Caption / labels
+        static func caption(_ size: CGFloat = 12) -> SwiftUI.Font {
+            .system(size: size, weight: .medium)
+        }
     }
 
     // MARK: Radius / Spacing
-    static let radiusCard: CGFloat = 16
+    static let radiusCard: CGFloat = 18
     static let radiusSmall: CGFloat = 8
-    static let paddingCard: CGFloat = 16
+    static let radiusPill: CGFloat = 99
+    static let paddingCard: CGFloat = 17
+    static let paddingCompact: CGFloat = 14
     static let paddingScreen: CGFloat = 20
 }
 
@@ -56,52 +76,42 @@ extension Color {
     }
 }
 
-// MARK: — Verdict color/label helpers
+// MARK: — Verdict helpers (BULL / BEAR only, no neutral)
 
-extension Verdict {
+enum Verdict: String, Codable {
+    case bull = "BULL"
+    case bear = "BEAR"
+
     var color: Color {
         switch self {
         case .bull: return DS.Color.bull
         case .bear: return DS.Color.bear
-        case .neutral: return DS.Color.neutral
         }
     }
     var label: String {
         switch self {
         case .bull: return "BULL"
         case .bear: return "BEAR"
-        case .neutral: return "NEUTRAL"
-        }
-    }
-    var icon: String {
-        switch self {
-        case .bull: return "arrow.up.right"
-        case .bear: return "arrow.down.right"
-        case .neutral: return "minus"
         }
     }
 }
+
+// MARK: — Tier helpers
 
 extension Int {
     var tierColor: Color {
         switch self {
         case 1: return DS.Color.tier1
         case 2: return DS.Color.tier2
-        default: return DS.Color.tier3
+        default: return DS.Color.textMuted
         }
     }
     var tierLabel: String {
         switch self {
-        case 1: return "TIER 1 — EXCEPTIONAL"
-        case 2: return "TIER 2 — HIGH CONVICTION"
-        default: return "TIER 3 — WATCH"
+        case 1: return "EXCEPTIONAL"
+        case 2: return "HIGH CONVICTION"
+        default: return ""
         }
     }
-    var tierShort: String {
-        switch self {
-        case 1: return "T1"
-        case 2: return "T2"
-        default: return "T3"
-        }
-    }
+    var tierShort: String { "T\(self)" }
 }

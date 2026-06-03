@@ -4,191 +4,175 @@ struct FeedView: View {
     @StateObject private var vm = FeedViewModel()
     @EnvironmentObject var auth: AuthService
 
-    private let filters = ["All", "Tier 1", "Tier 2", "BULL", "BEAR", "Gov Contracts", "FDA", "Partnerships"]
+    @State private var activeFilter = "all"
+    @State private var detailOpp: Opportunity? = nil
+    @State private var isPro = false
+
+    private let filters: [(id: String, label: String, bolt: Bool)] = [
+        ("all", "All", false),
+        ("t1", "Tier 1", false),
+        ("t2", "Tier 2", false),
+        ("ts", "Triple Signal", true),
+    ]
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                DS.Color.background.ignoresSafeArea()
+        ZStack {
+            DS.Color.background.ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    // ── Header
-                    header
+            VStack(spacing: 0) {
+                // Scrollable feed
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Header
+                        FeedHeader(count: vm.opportunities.count)
 
-                    // ── Filter chips
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(filters, id: \.self) { f in
-                                FilterChip(label: f, isSelected: vm.activeFilter == f) {
-                                    vm.activeFilter = f
-                                }
+                        // Filter chips
+                        FilterChips(
+                            filters: filters,
+                            active: activeFilter,
+                            onChange: { activeFilter = $0 }
+                        )
+                        .padding(.bottom, 4)
+
+                        // Cards
+                        LazyVStack(spacing: 14) {
+                            ForEach(filtered) { opp in
+                                OpportunityCard(
+                                    opportunity: opp,
+                                    onOpen: { detailOpp = opp },
+                                    onUnlock: { isPro = true },
+                                    density: .regular,
+                                    gaugeStyle: .ring,
+                                    isLocked: !isPro
+                                )
+                                .padding(.horizontal, 16)
                             }
+
+                            // Footer
+                            Text("Scanned 12,400 filings today · \(filtered.count) cleared 75/100")
+                                .font(.system(size: 11.5))
+                                .foregroundColor(DS.Color.textMuted)
+                                .padding(.top, 8)
+                                .padding(.bottom, 24)
                         }
-                        .padding(.horizontal, DS.paddingScreen)
-                        .padding(.vertical, 10)
-                    }
-
-                    Divider().background(DS.Color.border)
-
-                    // ── Feed
-                    if vm.isLoading && vm.opportunities.isEmpty {
-                        loadingState
-                    } else if vm.opportunities.isEmpty {
-                        emptyState
-                    } else {
-                        feedList
                     }
                 }
+
+                // Tab bar spacer
+                Color.clear.frame(height: 22)
             }
-            .navigationBarHidden(true)
         }
-        .task { await vm.loadFeed(isPremium: auth.currentUser?.subscriptionTier.hasFull ?? false) }
+        .sheet(item: $detailOpp) { opp in
+            DetailSheet(
+                opportunity: opp,
+                isPro: isPro,
+                onTogglePro: { isPro.toggle() }
+            )
+        }
+        .task {
+            vm.opportunities = Opportunity.mocks
+        }
     }
 
-    // MARK: — Sub-views
+    private var filtered: [Opportunity] {
+        switch activeFilter {
+        case "t1": return vm.opportunities.filter { $0.tier == 1 }
+        case "t2": return vm.opportunities.filter { $0.tier == 2 }
+        case "ts": return vm.opportunities.filter { $0.tripleSignal }
+        default: return vm.opportunities
+        }
+    }
+}
 
-    private var header: some View {
+// MARK: — Feed header
+
+struct FeedHeader: View {
+    let count: Int
+    private var tripleCount: Int {
+        Opportunity.mocks.filter { $0.tripleSignal }.count
+    }
+
+    var body: some View {
         HStack(alignment: .bottom) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(DS.Color.bull)
-                        .frame(width: 8, height: 8)
-                        .scaleEffect(vm.isScanning ? 1.3 : 1.0)
-                        .animation(.easeInOut(duration: 0.8).repeatForever(), value: vm.isScanning)
-                    Text(vm.isScanning ? "Scanning markets…" : "Radar active")
-                        .font(DS.Font.caption(11))
-                        .foregroundColor(vm.isScanning ? DS.Color.bull : DS.Color.textSecondary)
-                }
+            VStack(alignment: .leading, spacing: 1) {
                 Text("No Fomo")
-                    .font(DS.Font.displayBold(28))
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.white)
+                    .tracking(-0.5)
+                Text("\(count) live · \(tripleCount) triple-signal")
+                    .font(.system(size: 12))
+                    .foregroundColor(DS.Color.textMuted)
             }
             Spacer()
-            Button(action: {}) {
-                Image(systemName: "bell.fill")
-                    .font(.system(size: 18))
-                    .foregroundColor(DS.Color.textSecondary)
-            }
+            // Avatar
+            Circle()
+                .fill(DS.Color.elevated)
+                .frame(width: 34, height: 34)
+                .overlay(
+                    Circle()
+                        .stroke(DS.Color.border, lineWidth: 0.5)
+                )
+                .overlay(
+                    Text("JD")
+                        .font(DS.Font.mono(13))
+                        .foregroundColor(DS.Color.textSecondary)
+                )
         }
-        .padding(.horizontal, DS.paddingScreen)
-        .padding(.top, 16)
-        .padding(.bottom, 8)
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 14)
     }
+}
 
-    private var feedList: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                // Free tier delay banner
-                if !(auth.currentUser?.subscriptionTier.hasFull ?? false) {
-                    FreeDelayBanner()
-                        .padding(.horizontal, DS.paddingScreen)
-                }
+// MARK: — Filter chips
 
-                ForEach(vm.filtered) { opp in
-                    NavigationLink(destination: OpportunityDetailView(opportunity: opp)) {
-                        OpportunityCard(opportunity: opp) {
-                            Task { await vm.toggleWatchlist(opp) }
+struct FilterChips: View {
+    let filters: [(id: String, label: String, bolt: Bool)]
+    let active: String
+    let onChange: (String) -> Void
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(filters, id: \.id) { filter in
+                    Button(action: { onChange(filter.id) }) {
+                        HStack(spacing: 5) {
+                            if filter.bolt {
+                                Image(systemName: "bolt.fill")
+                                    .font(.system(size: 8))
+                                    .foregroundColor(DS.Color.tier1)
+                            }
+                            Text(filter.label)
+                                .font(.system(size: 13, weight: .semibold))
                         }
+                        .foregroundColor(active == filter.id ? DS.Color.background : DS.Color.textSecondary)
+                        .padding(.horizontal, 14)
+                        .frame(height: 32)
+                        .background(
+                            active == filter.id
+                                ? Color.white
+                                : DS.Color.elevated
+                        )
+                        .overlay(
+                            Capsule()
+                                .stroke(
+                                    active == filter.id
+                                        ? Color.white
+                                        : DS.Color.border,
+                                    lineWidth: 0.5
+                                )
+                        )
+                        .clipShape(Capsule())
                     }
-                    .padding(.horizontal, DS.paddingScreen)
-                }
-
-                if vm.hasMore {
-                    ProgressView()
-                        .tint(DS.Color.accent)
-                        .padding()
-                        .onAppear {
-                            Task { await vm.loadMore(isPremium: auth.currentUser?.subscriptionTier.hasFull ?? false) }
-                        }
                 }
             }
-            .padding(.top, 8)
-            .padding(.bottom, 100)
-        }
-        .refreshable { await vm.loadFeed(isPremium: auth.currentUser?.subscriptionTier.hasFull ?? false) }
-    }
-
-    private var loadingState: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            ProgressView()
-                .tint(DS.Color.accent)
-                .scaleEffect(1.5)
-            Text("Scanning catalysts…")
-                .font(DS.Font.body())
-                .foregroundColor(DS.Color.textSecondary)
-            Spacer()
-        }
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: 12) {
-            Spacer()
-            Image(systemName: "antenna.radiowaves.left.and.right")
-                .font(.system(size: 48))
-                .foregroundColor(DS.Color.textMuted)
-            Text("No signals today")
-                .font(DS.Font.displayMedium(18))
-                .foregroundColor(.white)
-            Text("The AI council found no opportunities above the 75/100 threshold. Check back tomorrow.")
-                .font(DS.Font.body(14))
-                .foregroundColor(DS.Color.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Spacer()
+            .padding(.horizontal, 20)
         }
     }
 }
 
-// MARK: — Filter chip
-
-struct FilterChip: View {
-    let label: String
-    let isSelected: Bool
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            Text(label)
-                .font(DS.Font.caption(12))
-                .foregroundColor(isSelected ? .black : DS.Color.textSecondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(isSelected ? DS.Color.bull : DS.Color.cardElevated)
-                .clipShape(Capsule())
-        }
-    }
-}
-
-// MARK: — Free delay banner
-
-struct FreeDelayBanner: View {
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "clock.fill")
-                .font(.system(size: 13))
-                .foregroundColor(DS.Color.neutral)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Free tier: 24h delayed alerts")
-                    .font(DS.Font.caption(12))
-                    .foregroundColor(.white)
-                Text("Upgrade to Pro for real-time signals")
-                    .font(DS.Font.caption(11))
-                    .foregroundColor(DS.Color.textSecondary)
-            }
-            Spacer()
-            Text("Upgrade")
-                .font(DS.Font.caption(12))
-                .foregroundColor(.black)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(DS.Color.tier1)
-                .clipShape(Capsule())
-        }
-        .padding(12)
-        .background(DS.Color.neutral.opacity(0.1))
-        .overlay(RoundedRectangle(cornerRadius: DS.radiusSmall).stroke(DS.Color.neutral.opacity(0.3), lineWidth: 0.5))
-        .clipShape(RoundedRectangle(cornerRadius: DS.radiusSmall))
-    }
+#Preview {
+    FeedView()
+        .environmentObject(AuthService.shared)
+        .preferredColorScheme(.dark)
 }

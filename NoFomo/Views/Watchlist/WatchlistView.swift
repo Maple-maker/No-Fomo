@@ -1,123 +1,162 @@
 import SwiftUI
 
 struct WatchlistView: View {
-    @StateObject private var vm = WatchlistViewModel()
-    @EnvironmentObject var auth: AuthService
+    @State private var savedIDs: Set<String> = ["crvo", "mrdn"]
+    @State private var detailOpp: Opportunity? = nil
+
+    private var items: [Opportunity] {
+        Opportunity.mocks.filter { savedIDs.contains($0.id) }
+    }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                DS.Color.background.ignoresSafeArea()
+        ZStack {
+            DS.Color.background.ignoresSafeArea()
+
+            if items.isEmpty {
+                emptyContent
+            } else {
                 VStack(spacing: 0) {
-                    header
-                    if vm.items.isEmpty {
-                        emptyState
-                    } else {
-                        list
+                    WatchlistHeader(count: items.count)
+
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(items) { opp in
+                                WatchlistRow(
+                                    opportunity: opp,
+                                    isSaved: savedIDs.contains(opp.id),
+                                    onToggleSave: { toggleSave(opp.id) }
+                                )
+                                .onTapGesture { detailOpp = opp }
+                                .padding(.horizontal, 16)
+                            }
+                        }
+                        .padding(.top, 4)
+                        .padding(.bottom, 44)
                     }
                 }
             }
-            .navigationBarHidden(true)
         }
-        .task { await vm.load(userId: auth.currentUser?.id ?? "") }
+        .sheet(item: $detailOpp) { opp in
+            DetailSheet(opportunity: opp, isPro: true)
+        }
     }
 
-    private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Watchlist")
-                    .font(DS.Font.displayBold(28))
-                    .foregroundColor(.white)
-                Text("\(vm.items.count) positions tracked")
-                    .font(DS.Font.caption(12))
-                    .foregroundColor(DS.Color.textSecondary)
-            }
+    private var emptyContent: some View {
+        VStack(spacing: 0) {
+            WatchlistHeader(count: 0)
             Spacer()
-        }
-        .padding(.horizontal, DS.paddingScreen)
-        .padding(.top, 16)
-        .padding(.bottom, 12)
-    }
-
-    private var list: some View {
-        ScrollView {
-            LazyVStack(spacing: 10) {
-                ForEach(vm.items) { opp in
-                    NavigationLink(destination: OpportunityDetailView(opportunity: opp)) {
-                        WatchlistRow(opportunity: opp)
-                    }
-                    .padding(.horizontal, DS.paddingScreen)
+            VStack(spacing: 14) {
+                Image(systemName: "bookmark")
+                    .font(.system(size: 34))
+                    .foregroundColor(DS.Color.textMuted)
+                VStack(spacing: 4) {
+                    Text("Nothing tracked yet")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white)
+                    Text("Bookmark an opportunity to follow its score and buy zones here.")
+                        .font(.system(size: 13))
+                        .foregroundColor(DS.Color.textMuted)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 220)
                 }
             }
-            .padding(.top, 8)
-            .padding(.bottom, 100)
+            Spacer()
         }
     }
 
-    private var emptyState: some View {
-        VStack(spacing: 12) {
-            Spacer()
-            Image(systemName: "bookmark")
-                .font(.system(size: 48))
-                .foregroundColor(DS.Color.textMuted)
-            Text("No positions tracked")
-                .font(DS.Font.displayMedium(18))
-                .foregroundColor(.white)
-            Text("Bookmark opportunities from the radar to track them here.")
-                .font(DS.Font.body(14))
-                .foregroundColor(DS.Color.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Spacer()
+    private func toggleSave(_ id: String) {
+        if savedIDs.contains(id) {
+            savedIDs.remove(id)
+        } else {
+            savedIDs.insert(id)
         }
     }
 }
+
+// MARK: — Watchlist header
+
+struct WatchlistHeader: View {
+    let count: Int
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Watchlist")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.white)
+                    .tracking(-0.5)
+                Text("\(count) tracked")
+                    .font(.system(size: 12))
+                    .foregroundColor(DS.Color.textMuted)
+            }
+            Spacer()
+            // Avatar
+            Circle()
+                .fill(DS.Color.elevated)
+                .frame(width: 34, height: 34)
+                .overlay(
+                    Circle()
+                        .stroke(DS.Color.border, lineWidth: 0.5)
+                )
+                .overlay(
+                    Text("JD")
+                        .font(DS.Font.mono(13))
+                        .foregroundColor(DS.Color.textSecondary)
+                )
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 14)
+    }
+}
+
+// MARK: — Watchlist row (compact)
 
 struct WatchlistRow: View {
     let opportunity: Opportunity
+    let isSaved: Bool
+    var onToggleSave: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text("$\(opportunity.ticker)")
-                        .font(DS.Font.displayBold(16))
+            ScoreGauge(score: opportunity.score, tier: opportunity.tier, size: 42, stroke: 4)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 7) {
+                    Text(opportunity.ticker)
+                        .font(DS.Font.mono(16))
                         .foregroundColor(.white)
-                    Text(opportunity.tier.tierShort)
-                        .font(DS.Font.caption(10))
-                        .foregroundColor(opportunity.tier.tierColor)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(opportunity.tier.tierColor.opacity(0.15))
-                        .clipShape(Capsule())
+                    TierBadge(tier: opportunity.tier)
+                        .scaleEffect(0.85)
                 }
                 Text(opportunity.companyName)
-                    .font(DS.Font.caption(12))
-                    .foregroundColor(DS.Color.textSecondary)
+                    .font(.system(size: 12))
+                    .foregroundColor(DS.Color.textMuted)
+                    .lineLimit(1)
             }
+
             Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
-                if let price = opportunity.snap?.price {
-                    Text("$\(String(format: "%.2f", price))")
-                        .font(DS.Font.mono(15))
-                        .foregroundColor(.white)
-                }
-                VerdictChip(label: "", verdict: opportunity.debateVerdict)
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("$\(String(format: "%.2f", opportunity.price))")
+                    .font(DS.Font.mono(14))
+                    .foregroundColor(.white)
+                Text("+\(Int(opportunity.upside))%")
+                    .font(DS.Font.mono(12))
+                    .foregroundColor(DS.Color.bull)
             }
-            ScoreGauge(score: opportunity.overallScore, size: 44)
         }
-        .padding(DS.paddingCard)
+        .padding(13)
         .background(DS.Color.card)
-        .clipShape(RoundedRectangle(cornerRadius: DS.radiusCard))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(DS.Color.border, lineWidth: 0.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 
-@MainActor
-final class WatchlistViewModel: ObservableObject {
-    @Published var items: [Opportunity] = []
-
-    func load(userId: String) async {
-        guard !userId.isEmpty else { return }
-        items = (try? await SupabaseService.shared.fetchWatchlist(userId: userId)) ?? []
-    }
+#Preview {
+    WatchlistView()
+        .preferredColorScheme(.dark)
 }
