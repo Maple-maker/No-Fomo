@@ -32,9 +32,12 @@ enum DS {
 
     // MARK: Typography — system fonts that map to SF Pro / SF Mono on iOS
     enum Font {
-        // Display/headlines — geometric sans, bold
+        // Display/headlines — geometric sans
         static func displayBold(_ size: CGFloat) -> SwiftUI.Font {
             .system(size: size, weight: .bold, design: .default)
+        }
+        static func displayMedium(_ size: CGFloat) -> SwiftUI.Font {
+            .system(size: size, weight: .medium, design: .default)
         }
         // Monospaced for all financial figures — this is data, treat it as data
         static func mono(_ size: CGFloat) -> SwiftUI.Font {

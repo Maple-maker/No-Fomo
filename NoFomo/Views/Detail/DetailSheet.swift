@@ -172,6 +172,7 @@ struct DetailSheet: View {
     private var councilSection: some View {
         ExpandableSection(
             title: "AI Council Debate",
+            defaultOpen: true,
             badge: AnyView(
                 HStack(spacing: 4) {
                     let bulls = [opportunity.council.gemini, opportunity.council.deepseek, opportunity.council.cio]
@@ -180,8 +181,7 @@ struct DetailSheet: View {
                         .font(DS.Font.mono(11))
                         .foregroundColor(bulls >= 2 ? DS.Color.bull : DS.Color.bear)
                 }
-            ),
-            defaultOpen: true
+            )
         ) {
             VStack(spacing: 14) {
                 CaseBlock(verdict: .bull, text: opportunity.bullCase)
@@ -225,8 +225,8 @@ struct DetailSheet: View {
     private var buyZonesSection: some View {
         ExpandableSection(
             title: "Buy Zones",
-            badge: isPro ? nil : AnyView(LockBadge()),
-            defaultOpen: true
+            defaultOpen: true,
+            badge: isPro ? nil : AnyView(LockBadge())
         ) {
             BuyZoneCards(
                 buyZones: opportunity.buyZones,
