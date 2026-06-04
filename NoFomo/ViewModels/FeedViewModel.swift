@@ -21,18 +21,24 @@ final class FeedViewModel: ObservableObject {
         do {
             let results = try await SupabaseService.shared.fetchFeed(isPremium: isPremium, limit: pageSize, offset: 0)
             if results.isEmpty {
-                // Supabase returned empty — try seeding, then use mocks
+                // Database is empty — seed it, then retry
                 try? await SupabaseService.shared.seedOpportunities()
                 let retry = try? await SupabaseService.shared.fetchFeed(isPremium: isPremium, limit: pageSize, offset: 0)
-                opportunities = retry?.isEmpty == false ? retry! : Opportunity.mocks
+                if let retryResults = retry, !retryResults.isEmpty {
+                    opportunities = retryResults
+                    hasMore = retryResults.count == pageSize
+                } else {
+                    // Supabase empty — fall back to local mocks
+                    opportunities = Opportunity.mocks
+                }
             } else {
                 opportunities = results
                 hasMore = results.count == pageSize
             }
         } catch {
-            // Supabase unreachable or table doesn't exist — use mock data
+            // Network/server error — use mock data
+            print("[feed] Supabase error: \(error.localizedDescription)")
             opportunities = Opportunity.mocks
-            errorMessage = nil // mocks are fine, don't show error
         }
 
         isLoading = false

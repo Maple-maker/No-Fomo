@@ -20,40 +20,37 @@ final class SupabaseService {
         session = URLSession(configuration: config)
     }
 
-    // MARK: - Feed
+    // MARK: - Feed (reads from radar_opportunities table)
 
     func fetchFeed(isPremium: Bool, limit: Int = 20, offset: Int = 0) async throws -> [Opportunity] {
-        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/opportunity_feed"), resolvingAgainstBaseURL: false)!
+        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/radar_opportunities"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "select", value: "*"),
-            URLQueryItem(name: "order", value: "published_at.desc"),
+            URLQueryItem(name: "order", value: "created_at.desc"),
             URLQueryItem(name: "limit", value: "\(limit)"),
             URLQueryItem(name: "offset", value: "\(offset)"),
         ]
-        if !isPremium {
-            components.queryItems?.append(URLQueryItem(name: "is_premium", value: "eq.false"))
-        }
         var req = URLRequest(url: components.url!)
         req.addCommonHeaders()
         let (data, response) = try await session.data(for: req)
         try validate(response: response, data: data)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode([Opportunity].self, from: data)
+        let rows = try decoder.decode([RadarRow].self, from: data)
+        return rows.map { $0.toOpportunity() }
     }
 
-    func fetchOpportunity(id: String) async throws -> Opportunity {
-        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/opportunity_feed"), resolvingAgainstBaseURL: false)!
+    func fetchOpportunity(id: Int) async throws -> Opportunity {
+        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/radar_opportunities"), resolvingAgainstBaseURL: false)!
         components.queryItems = [URLQueryItem(name: "id", value: "eq.\(id)")]
         var req = URLRequest(url: components.url!)
         req.addCommonHeaders()
         let (data, response) = try await session.data(for: req)
         try validate(response: response, data: data)
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let results = try decoder.decode([Opportunity].self, from: data)
-        guard let first = results.first else { throw AppError.notFound }
-        return first
+        let rows = try decoder.decode([RadarRow].self, from: data)
+        guard let first = rows.first else { throw AppError.notFound }
+        return first.toOpportunity()
     }
 
     // MARK: - Watchlist
@@ -111,19 +108,149 @@ final class SupabaseService {
         _ = try await session.data(for: req)
     }
 
-    // MARK: - Seed data (for bootstrapping)
+    // MARK: - Seed data (posts to radar_opportunities)
 
     func seedOpportunities() async throws {
-        let opportunities = Opportunity.mocks
-        for opp in opportunities {
-            var req = URLRequest(url: baseURL.appendingPathComponent("/rest/v1/opportunity_feed"))
+        let rows = Opportunity.mocks.map { $0.toRadarRow() }
+        for row in rows {
+            var req = URLRequest(url: baseURL.appendingPathComponent("/rest/v1/radar_opportunities"))
             req.httpMethod = "POST"
             req.addCommonHeaders()
             req.setValue("return=minimal", forHTTPHeaderField: "Prefer")
-            req.httpBody = try JSONEncoder().encode(opp)
+            req.httpBody = try JSONEncoder().encode(row)
             let (_, response) = try await session.data(for: req)
             try validate(response: response, data: nil)
         }
+    }
+}
+
+// MARK: - Radar table row (matches radar_opportunities schema)
+
+struct RadarRow: Codable {
+    let id: Int?
+    let ticker: String
+    let tier: Int?
+    let overallScore: Double?
+    let thesis: String?
+    let geminiAnalysis: String?
+    let dataSnapshot: Snapshot?
+
+    struct Snapshot: Codable {
+        let companyName: String?
+        let sector: String?
+        let tripleSignal: Bool?
+        let price: Double?
+        let upside: Double?
+        let marketCap: String?
+        let probability: Double?
+        let catalyst: String?
+        let council: CouncilData?
+        let buyZones: BuyZonesData?
+        let bullCase: String?
+        let bearCase: String?
+        let financials: [[String]]?
+        let redFlags: [String]?
+        let invalidation: String?
+    }
+
+    struct CouncilData: Codable {
+        let gemini: String?
+        let deepseek: String?
+        let cio: String?
+    }
+
+    struct BuyZonesData: Codable {
+        let aggressive: Double?
+        let base: Double?
+        let conservative: Double?
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, ticker, tier, thesis
+        case overallScore = "overall_score"
+        case geminiAnalysis = "gemini_analysis"
+        case dataSnapshot = "data_snapshot"
+    }
+
+    func toOpportunity() -> Opportunity {
+        let snap = dataSnapshot
+        let council = AICouncil(
+            gemini: parseVerdict(snap?.council?.gemini ?? geminiAnalysis),
+            deepseek: parseVerdict(snap?.council?.deepseek ?? "BULL"),
+            cio: parseVerdict(snap?.council?.cio ?? "BULL")
+        )
+        let zones = BuyZones(
+            aggressive: snap?.buyZones?.aggressive ?? 0,
+            base: snap?.buyZones?.base ?? 0,
+            conservative: snap?.buyZones?.conservative ?? 0
+        )
+        return Opportunity(
+            id: id.map(String.init) ?? ticker.lowercased(),
+            ticker: ticker,
+            companyName: snap?.companyName ?? ticker,
+            sector: snap?.sector ?? "",
+            tier: tier ?? 2,
+            score: overallScore ?? 0,
+            tripleSignal: snap?.tripleSignal ?? false,
+            bluf: thesis ?? "",
+            price: snap?.price ?? 0,
+            upside: snap?.upside ?? 0,
+            marketCap: snap?.marketCap ?? "N/A",
+            probability: snap?.probability ?? 0,
+            catalyst: snap?.catalyst ?? "",
+            council: council,
+            buyZones: zones,
+            bullCase: snap?.bullCase ?? "",
+            bearCase: snap?.bearCase ?? "",
+            financials: snap?.financials ?? [],
+            redFlags: snap?.redFlags ?? [],
+            invalidation: snap?.invalidation ?? "",
+            isPremium: true,
+            publishedAt: Date()
+        )
+    }
+
+    private func parseVerdict(_ s: String?) -> Verdict {
+        guard let s = s?.uppercased() else { return .bull }
+        return s == "BEAR" ? .bear : .bull
+    }
+}
+
+extension Opportunity {
+    func toRadarRow() -> RadarRow {
+        RadarRow(
+            id: Int(id) ?? nil,
+            ticker: ticker,
+            tier: tier,
+            overallScore: score,
+            thesis: bluf,
+            geminiAnalysis: council.cio.rawValue,
+            dataSnapshot: RadarRow.Snapshot(
+                companyName: companyName,
+                sector: sector,
+                tripleSignal: tripleSignal,
+                price: price,
+                upside: upside,
+                marketCap: marketCap,
+                probability: probability,
+                catalyst: catalyst,
+                council: RadarRow.CouncilData(
+                    gemini: council.gemini.rawValue,
+                    deepseek: council.deepseek.rawValue,
+                    cio: council.cio.rawValue
+                ),
+                buyZones: RadarRow.BuyZonesData(
+                    aggressive: buyZones.aggressive,
+                    base: buyZones.base,
+                    conservative: buyZones.conservative
+                ),
+                bullCase: bullCase,
+                bearCase: bearCase,
+                financials: financials,
+                redFlags: redFlags,
+                invalidation: invalidation
+            )
+        )
     }
 }
 
