@@ -1,0 +1,93 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode/minimax-m3-free",
+  "small_model": "opencode/minimax-m3-free",
+  "default_agent": "hermes",
+  "share": "manual",
+  "autoupdate": "notify",
+  "instructions": ["AGENTS.md"],
+
+  "permission": {
+    "edit": "allow",
+    "bash": {
+      "rm -rf*": "deny",
+      "git push*": "ask",
+      "git commit*": "ask",
+      "xcrun altool*": "ask",
+      "fastlane *": "ask",
+      "npm publish*": "deny",
+      "*": "allow"
+    },
+    "webfetch": "allow",
+    "websearch": "allow",
+    "external_directory": {
+      "~/Library/MobileDevice/**": "ask",
+      "~/Library/Developer/Xcode/**": "allow",
+      "*": "ask"
+    }
+  },
+
+  "mcp": {
+    "supabase": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@supabase/mcp-server-supabase",
+        "--project-ref=lmgphebvungyqsnqitcg"
+      ],
+      "enabled": false,
+      "environment": {
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+      }
+    },
+
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp"],
+      "enabled": true
+    },
+
+    "github": {
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "enabled": false,
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+
+    "brave-search": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-brave-search"],
+      "enabled": false,
+      "environment": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      }
+    },
+
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp"],
+      "enabled": false
+    },
+
+    "polygon": {
+      "type": "local",
+      "command": ["uvx", "polygon-mcp"],
+      "enabled": false,
+      "environment": {
+        "POLYGON_API_KEY": "${POLYGON_API_KEY}"
+      }
+    },
+
+    "sec-edgar": {
+      "type": "local",
+      "command": ["uvx", "sec-edgar-mcp"],
+      "enabled": false,
+      "environment": {
+        "SEC_EDGAR_USER_AGENT": "${SEC_EDGAR_USER_AGENT}"
+      }
+    }
+  }
+}
