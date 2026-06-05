@@ -5,6 +5,7 @@ struct FeedView: View {
     @EnvironmentObject var auth: AuthService
 
     @State private var activeFilter = "all"
+    @State private var activeTag: String? = nil
     @State private var detailOpp: Opportunity? = nil
     @State private var isPro = false
 
@@ -13,7 +14,12 @@ struct FeedView: View {
         ("t1", "Tier 1", false),
         ("t2", "Tier 2", false),
         ("ts", "Triple Signal", true),
+        ("radar", "Radar", true),
     ]
+
+    private var allTags: [String] {
+        Array(Set(vm.opportunities.flatMap { $0.tags })).sorted()
+    }
 
     var body: some View {
         ZStack {
@@ -34,6 +40,52 @@ struct FeedView: View {
                         )
                         .padding(.bottom, 4)
 
+                        // Industry dropdown
+                        HStack(spacing: 8) {
+                            Menu {
+                                Button(action: { activeTag = nil }) {
+                                    HStack {
+                                        Text("All Industries")
+                                        if activeTag == nil { Image(systemName: "checkmark") }
+                                    }
+                                }
+                                Divider()
+                                ForEach(allTags, id: \.self) { tag in
+                                    Button(action: { activeTag = tag }) {
+                                        HStack {
+                                            Text(tag)
+                                            if activeTag == tag { Image(systemName: "checkmark") }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Text(activeTag ?? "Industry")
+                                        .font(.system(size: 12.5, weight: .semibold))
+                                        .foregroundColor(activeTag != nil ? DS.Color.background : DS.Color.textSecondary)
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundColor(activeTag != nil ? DS.Color.background : DS.Color.textMuted)
+                                }
+                                .padding(.horizontal, 12)
+                                .frame(height: 30)
+                                .background(activeTag != nil ? DS.Color.accent : DS.Color.elevated)
+                                .clipShape(Capsule())
+                            }
+
+                            if activeTag != nil {
+                                Button(action: { activeTag = nil }) {
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundColor(DS.Color.textSecondary)
+                                        .frame(width: 22, height: 22)
+                                        .background(DS.Color.elevated)
+                                        .clipShape(Circle())
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+
                         // Cards
                         LazyVStack(spacing: 14) {
                             ForEach(filtered) { opp in
@@ -49,7 +101,8 @@ struct FeedView: View {
                             }
 
                             // Footer
-                            Text("Scanned 12,400 filings today · \(filtered.count) cleared 75/100")
+                            let radarCount = vm.opportunities.filter { $0.detectionLane != nil && !$0.detectionLane!.isEmpty }.count
+                            Text("AEGIS Radar scanning 8 lanes · \(filtered.count) cleared · \(radarCount) radar detected")
                                 .font(.system(size: 11.5))
                                 .foregroundColor(DS.Color.textMuted)
                                 .padding(.top, 8)
@@ -75,12 +128,18 @@ struct FeedView: View {
     }
 
     private var filtered: [Opportunity] {
+        var result: [Opportunity]
         switch activeFilter {
-        case "t1": return vm.opportunities.filter { $0.tier == 1 }
-        case "t2": return vm.opportunities.filter { $0.tier == 2 }
-        case "ts": return vm.opportunities.filter { $0.tripleSignal }
-        default: return vm.opportunities
+        case "t1": result = vm.opportunities.filter { $0.tier == 1 }
+        case "t2": result = vm.opportunities.filter { $0.tier == 2 }
+        case "ts": result = vm.opportunities.filter { $0.tripleSignal }
+        case "radar": result = vm.opportunities.filter { $0.detectionLane != nil && !$0.detectionLane!.isEmpty }
+        default: result = vm.opportunities
         }
+        if let tag = activeTag {
+            result = result.filter { $0.tags.contains(tag) }
+        }
+        return result
     }
 }
 

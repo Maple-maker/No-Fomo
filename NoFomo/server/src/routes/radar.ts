@@ -21,7 +21,7 @@ router.post('/', async (req: Request, res: Response) => {
   const skipPersist = req.body.skip_persist === true
 
   try {
-    const supabase = getSupabaseAdmin()
+    const supabase = skipPersist ? null : getSupabaseAdmin()
     const userId = req.body.user_id || 'radar-server'
 
     // Phase 1 — Research

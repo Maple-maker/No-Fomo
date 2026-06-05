@@ -108,6 +108,13 @@ struct OnboardingView: View {
                         .font(DS.Font.body(14))
                         .foregroundColor(DS.Color.textSecondary)
                 }
+
+                Button(action: { auth.forceDevSession() }) {
+                    Text("Skip — Dev Preview")
+                        .font(DS.Font.caption(11))
+                        .foregroundColor(DS.Color.textMuted)
+                }
+                .padding(.top, 4)
             }
             .padding(.horizontal, DS.paddingScreen)
             .padding(.bottom, 48)

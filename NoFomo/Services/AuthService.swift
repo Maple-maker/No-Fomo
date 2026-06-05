@@ -66,6 +66,14 @@ final class AuthService: ObservableObject {
         await handleAuthResponse(response)
     }
 
+    func forceDevSession() {
+        currentToken = "dev-skip-token"
+        currentUser = AppUser(id: "dev-user-0001", email: "dev@nofomo.local", subscriptionTier: .pro, apnsToken: nil)
+        isAuthenticated = true
+        UserDefaults.standard.set("dev-skip-token", forKey: "auth_token")
+        UserDefaults.standard.set("dev-user-0001", forKey: "auth_user_id")
+    }
+
     func signOut() {
         currentToken = nil
         currentUser = nil

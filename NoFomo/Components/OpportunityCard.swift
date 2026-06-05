@@ -26,7 +26,11 @@ struct OpportunityCard: View {
             VStack(alignment: .leading, spacing: gap) {
                 headerRow
                 blufText
+                notificationSubline
+                happeningNowSection
+                upcomingCompact
                 metricsStrip
+                radarFreshnessLine
                 councilRow
                 buyZonesFooter
             }
@@ -54,6 +58,9 @@ struct OpportunityCard: View {
                     TierBadge(tier: opportunity.tier)
                     if opportunity.tripleSignal {
                         TripleSignalBadge()
+                    }
+                    if let lane = opportunity.detectionLane, !lane.isEmpty {
+                        RadarDetectionBadge(lane: lane)
                     }
                 }
 
@@ -87,10 +94,132 @@ struct OpportunityCard: View {
     // MARK: BLUF — bottom line up front
     private var blufText: some View {
         Text(opportunity.bluf)
-            .font(.system(size: 14.5))
+            .font(.system(size: 14.5, weight: .semibold))
             .foregroundColor(.white)
             .lineSpacing(3)
             .fixedSize(horizontal: false, vertical: true)
+    }
+
+    // MARK: Notification subline
+    private var notificationSubline: some View {
+        Group {
+            if !opportunity.notificationLine.isEmpty {
+                HStack(spacing: 6) {
+                    Text(opportunity.notificationLine)
+                        .font(.system(size: 11.5))
+                        .foregroundColor(DS.Color.textSecondary)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(10)
+                .background(DS.Color.elevated)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7)
+                        .stroke(DS.Color.border, lineWidth: 0.5)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+            }
+        }
+    }
+
+    // MARK: Happening Now — price action, TA, AI synopsis
+    @ViewBuilder
+    private var happeningNowSection: some View {
+        if !opportunity.aiSynopsis.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("HAPPENING NOW")
+                    .font(.system(size: 10.5))
+                    .foregroundColor(DS.Color.textMuted)
+                    .tracking(0.6)
+
+                HStack(spacing: 8) {
+                    HStack(spacing: 4) {
+                        Text(opportunity.priceChangePct >= 0 ? "▲" : "▼")
+                            .font(.system(size: 10))
+                        Text(String(format: "%+.1f%%", opportunity.priceChangePct))
+                            .font(DS.Font.mono(12))
+                    }
+                    .foregroundColor(
+                        opportunity.priceChangePct >= 0
+                            ? DS.Color.bull
+                            : DS.Color.bear
+                    )
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        (opportunity.priceChangePct >= 0
+                            ? DS.Color.bull
+                            : DS.Color.bear
+                        ).opacity(0.12)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5)
+                            .stroke(
+                                (opportunity.priceChangePct >= 0
+                                    ? DS.Color.bull
+                                    : DS.Color.bear
+                                ).opacity(0.3),
+                                lineWidth: 0.5
+                            )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+
+                    Text(opportunity.taSummary)
+                        .font(DS.Font.mono(11))
+                        .foregroundColor(DS.Color.textSecondary)
+                        .lineLimit(1)
+                }
+
+                if let attributed = try? AttributedString(
+                    markdown: opportunity.aiSynopsis
+                ) {
+                    Text(attributed)
+                        .font(DS.Font.body(14))
+                        .foregroundColor(DS.Color.textSecondary)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .environment(\.openURL, OpenURLAction { url in
+                            UIApplication.shared.open(url)
+                            return .handled
+                        })
+                } else {
+                    Text(opportunity.aiSynopsis)
+                        .font(DS.Font.body(14))
+                        .foregroundColor(DS.Color.textSecondary)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    // MARK: Upcoming — next catalyst/earnings
+    private var upcomingCompact: some View {
+        Group {
+            if !opportunity.upcomingEvents.isEmpty {
+                let next = opportunity.upcomingEvents.prefix(2)
+                VStack(alignment: .leading, spacing: 5) {
+                    ForEach(Array(next), id: \.self) { event in
+                        let date = event.count > 0 ? event[0] : ""
+                        let desc = event.count > 1 ? event[1] : ""
+                        let type = event.count > 2 ? event[2] : ""
+                        HStack(spacing: 7) {
+                            Text(date.uppercased())
+                                .font(.system(size: 9.5, weight: .bold))
+                                .foregroundColor(type == "earnings" ? DS.Color.tier1 : type == "sector" ? DS.Color.accent : DS.Color.tier2)
+                            Text(desc)
+                                .font(.system(size: 12))
+                                .foregroundColor(DS.Color.textSecondary)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(DS.Color.elevated)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
     }
 
     // MARK: Metrics strip — Price | Upside | Mkt Cap | Prob
@@ -105,6 +234,46 @@ struct OpportunityCard: View {
         .padding(.horizontal, 13)
         .background(DS.Color.elevated)
         .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    // MARK: Radar freshness indicator
+    @ViewBuilder
+    private var radarFreshnessLine: some View {
+        if let lane = opportunity.detectionLane, !lane.isEmpty {
+            HStack(spacing: 6) {
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.system(size: 9))
+                    .foregroundColor(DS.Color.accent)
+                Text("RADAR")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(DS.Color.accent)
+                    .tracking(0.6)
+                if let researchedAt = opportunity.researchedAt {
+                    Text("·")
+                        .foregroundColor(DS.Color.textMuted)
+                    Text(formatRelativeDate(researchedAt))
+                        .font(DS.Font.mono(10))
+                        .foregroundColor(DS.Color.textMuted)
+                }
+                Spacer()
+                Text(lane)
+                    .font(.system(size: 9))
+                    .foregroundColor(DS.Color.textSecondary)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(DS.Color.elevated)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+    }
+
+    private func formatRelativeDate(_ iso: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        guard let date = formatter.date(from: iso) else { return iso }
+        let relFormatter = RelativeDateTimeFormatter()
+        relFormatter.unitsStyle = .abbreviated
+        return relFormatter.localizedString(for: date, relativeTo: Date())
     }
 
     // MARK: AI Council row
@@ -278,6 +447,44 @@ struct BuyZoneCards: View {
                 }
             }
         }
+    }
+}
+
+// MARK: — Radar Detection Badge
+
+struct RadarDetectionBadge: View {
+    let lane: String
+
+    private var color: Color {
+        if lane.lowercased().contains("insider") { return DS.Color.tier1 }
+        if lane.lowercased().contains("government") || lane.lowercased().contains("regulatory") { return Color(red: 0.5, green: 0.6, blue: 1.0) }
+        if lane.lowercased().contains("indirect") || lane.lowercased().contains("beneficiary") { return DS.Color.accent }
+        if lane.lowercased().contains("overlook") || lane.lowercased().contains("underfollow") { return DS.Color.tier2 }
+        return DS.Color.accent
+    }
+
+    private var icon: String {
+        if lane.lowercased().contains("insider") { return "person.2.fill" }
+        if lane.lowercased().contains("government") || lane.lowercased().contains("regulatory") { return "building.columns.fill" }
+        if lane.lowercased().contains("indirect") || lane.lowercased().contains("beneficiary") { return "link.circle.fill" }
+        if lane.lowercased().contains("overlook") || lane.lowercased().contains("underfollow") { return "eye.fill" }
+        return "antenna.radiowaves.left.and.right"
+    }
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon).font(.system(size: 7))
+            Text(lane.uppercased())
+                .font(.system(size: 8, weight: .bold))
+                .tracking(0.5)
+                .lineLimit(1)
+        }
+        .foregroundColor(color)
+        .padding(.horizontal, 5)
+        .frame(height: 16)
+        .background(color.opacity(0.12))
+        .overlay(Capsule().stroke(color.opacity(0.3), lineWidth: 0.5))
+        .clipShape(Capsule())
     }
 }
 
