@@ -24,6 +24,7 @@ Quota enforcement is **server-side** (Supabase RPC + RLS), never client-only.
 | Payments    | StoreKit 2 (planned) — wrap behind RevenueCat if cross-platform later |
 | Push        | APNs token registered via `SupabaseService.registerPushToken`     |
 | AI council  | Gemini, DeepSeek, arbiter CIO model — verdicts persisted as `Verdict` enum |
+| Research    | Python 3.11+, `backend/stock_data.py` (prices + TA), `backend/sec_scanner.py` (SEC catalyst scan) |
 
 ## File map
 
@@ -47,6 +48,10 @@ Components/
   DesignSystem.swift         colors, typography, spacing
   OpportunityCard.swift
   ScoreGauge.swift
+backend/
+  stock_data.py              price + RSI/MACD/Bollinger via yfinance (free spike)
+  sec_scanner.py             SEC EDGAR catalyst scanner (free, no API key)
+  requirements.txt           yfinance, pandas, requests
 ```
 
 ## Conventions

@@ -4,6 +4,7 @@
 > **Local path:** `/Users/jaidenrabatin/NoFomo`
 > **Date:** 2026-06-05
 > **Target:** App Store submission by end of June 2026
+> **Hermes VPS:** Already installed with OpenRouter key.
 
 ---
 
@@ -38,6 +39,14 @@
 | `Views/Onboarding/OnboardingView.swift` | ✅ | First-run onboarding flow. |
 | `Components/DesignSystem.swift` | ✅ | Colors, typography, spacing, radius. `Verdict` and tier helpers. Dark-only palette. |
 | `Components/ScoreGauge.swift` | ✅ | Visual score gauge. |
+
+### Python Backend (Research + Data Pipeline) 🆕
+
+| File | Status | Purpose |
+|---|---|---|
+| `backend/stock_data.py` | ✅ | Stock price + technical analysis via yfinance. RSI, MACD, Bollinger Bands, key metrics. JSON + terminal output. Free (unofficial — swap to FMP/Finnhub before production). |
+| `backend/sec_scanner.py` | ✅ | SEC EDGAR catalyst scanner via `data.sec.gov/submissions`. Monitors radar watchlist tickers for catalyst filings (8-K, 10-Q, S-1, etc.). Flags by category (M&A, government contract, FDA, financing, partnership). Free, no API key. |
+| `backend/requirements.txt` | ✅ | `yfinance`, `pandas`, `requests` |
 
 ### Design System
 
@@ -121,20 +130,19 @@ StoreKit 2 product IDs: `nofomo.pro.monthly`, `nofomo.pro.annual`
 
 ### FEATURES (before App Store)
 
-5. **Real stock prices** — API integration (Twelve Data free tier → FMP/Finnhub paid). Pull price + RSI/MACD per ticker.
-6. **SEC EDGAR scanner** — `efts.sec.gov` full-text search for catalyst keywords in 8-Ks. Free, no API key.
-7. **AI council backend** — Gemini + DeepSeek + CIO arbiter debate engine. Runs as Supabase edge function or scheduled job. Persists verdicts to `radar_opportunities`.
-8. **Push notifications** — APNs via `SupabaseService.registerPushToken`, triggered by council verdicts.
-9. **Redis caching** — cache stock prices (30-60s TTL), AI debates (per ticker+day), SEC lookups (permanent). Cache-aside pattern.
-10. **Per-user rate limiting** — token-bucket in Redis, tier-based quotas, global budget circuit-breaker.
-11. **RLS on Supabase** — users only see their own watchlists, usage, and alerts.
+5. **Wire backend scripts into the radar pipeline** — `backend/stock_data.py` and `backend/sec_scanner.py` are built and tested. Next: wrap in a scheduler (cron or Supabase cron) that runs scans → feeds the AI council → persists to `radar_opportunities`.
+6. **AI council backend** — Gemini + DeepSeek + CIO arbiter debate engine. Runs as Supabase edge function or scheduled job. Persists verdicts to `radar_opportunities`.
+7. **Push notifications** — APNs via `SupabaseService.registerPushToken`, triggered by council verdicts.
+8. **Redis caching** — cache stock prices (30-60s TTL), AI debates (per ticker+day), SEC lookups (permanent). Cache-aside pattern.
+9. **Per-user rate limiting** — token-bucket in Redis, tier-based quotas, global budget circuit-breaker.
+10. **RLS on Supabase** — users only see their own watchlists, usage, and alerts.
 
 ### POLISH (pre-submission)
 
-12. SwiftLint wired
-13. `NoFomoTests` target
-14. Error tracking (Sentry or similar)
-15. Load testing (k6)
+11. SwiftLint wired
+12. `NoFomoTests` target
+13. Error tracking (Sentry or similar)
+14. Load testing (k6)
 
 ---
 
@@ -178,34 +186,35 @@ Example: *"This 8-K dropped at 4:01pm and nobody noticed."*
 
 ## 4. Today's Gameplan (2026-06-05)
 
-From `nofomo_gameplan_today.md`. Realistic scope for one day:
-
-### 0. UNBLOCK (5 min) ✅ DONE
+### 0. UNBLOCK ✅ DONE
 - [x] Repo URL: `https://github.com/Maple-maker/No-Fomo`
 - [x] One-sentence description delivered
+- [x] Repo pushed with all project files
 
-### 1. Orchestrator + Sub-agents
+### 1. Orchestrator + Sub-agents ✅ DONE
 - [x] Agent definitions exist in `.opencode/agent/`
 - [x] `opencode.json` configured with default agent `hermes`
-- [ ] Install OpenCode terminal harness
-- [ ] Get OpenRouter key (one key for Opus + DeepSeek + Hermes + Kimi)
-- [ ] Route table: planner→Opus, coding→DeepSeek V4, cheap→DeepSeek Flash, escalation→Opus
+- [x] OpenRouter + Hermes installed on VPS
+- [ ] Clone repo on VPS and run `opencode` to start Hermes
 - [ ] Prove the pipeline: run ONE real task through plan→code→review→merge
 
-### 2. Stock Price Spike
-- [ ] Get Twelve Data or Alpha Vantage API key
-- [ ] Pull one ticker's price + RSI/MACD, print it
-- [ ] Wrap in caching
+### 2. Stock Price Spike ✅ DONE
+- [x] `backend/stock_data.py` — yfinance wrapper, RSI/MACD/Bollinger, JSON + terminal output
+- [x] Tested live on AAPL, MSTR — returns price, metrics, TA, market cap
+- [ ] Swap to Twelve Data / FMP before production (yfinance is unofficial)
+- [ ] Wrap in Redis caching
 
-### 3. SEC Scanner Spike
-- [ ] Search recent 8-Ks via `efts.sec.gov` for catalyst keyword
-- [ ] Return company + filing date
+### 3. SEC Scanner Spike ✅ DONE
+- [x] `backend/sec_scanner.py` — monitors radar watchlist via `data.sec.gov/submissions`
+- [x] Flags catalyst filings (8-K, 10-Q, S-1) by category
+- [x] Tested live on AAPL, NVDA, PLTR, MSTR — 18 catalysts found in 60 days
+- [ ] Wire into scheduled pipeline: scan → council debate → persist to Supabase
 
-### 4. Content Engine (plan only today)
+### 4. Content Engine (plan today)
 - [ ] Pick the ONE series to start
 - [ ] Set up email capture waitlist page
 
-### 5. Value Prop + Pricing (draft done ✅)
+### 5. Value Prop + Pricing ✅ DONE
 - [x] Value prop drafted
 - [x] Pricing tiers drafted
 - [x] Paywall microcopy ready
@@ -233,6 +242,15 @@ From `nofomo_gameplan_today.md`. Realistic scope for one day:
 # iOS build
 xcodebuild -scheme NoFomo -destination 'platform=iOS Simulator,name=iPhone 15 Pro' build
 
+# Stock data spike
+python3 backend/stock_data.py AAPL               # terminal
+python3 backend/stock_data.py AAPL --json         # JSON
+
+# SEC scanner spike
+python3 backend/sec_scanner.py                    # full watchlist scan
+python3 backend/sec_scanner.py --tickers AAPL NVDA PLTR --days 30
+python3 backend/sec_scanner.py --json
+
 # Lint (not yet wired)
 # swiftlint
 
@@ -249,3 +267,16 @@ xcodebuild -scheme NoFomo -destination 'platform=iOS Simulator,name=iPhone 15 Pr
 - Agents run against dev branch + test DB, never prod.
 - "Stuck twice → escalate to Opus, don't keep flailing."
 - Rate limiting and budget circuit-breakers protect API spend.
+
+---
+
+## 8. Hermes Quick Start
+
+```bash
+git clone https://github.com/Maple-maker/No-Fomo.git
+cd No-Fomo
+pip3 install -r backend/requirements.txt
+opencode
+```
+
+Hermes will auto-load `AGENTS.md`, `opencode.json`, and all sub-agent definitions. First task to delegate: **"Wire backend/sec_scanner.py into a Supabase edge function that runs daily and feeds radar_opportunities."**

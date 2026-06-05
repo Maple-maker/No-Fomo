@@ -181,6 +181,23 @@ This radar runs on two agents with clearly divided responsibilities:
 | Orchestration & code | **Claude Code** | Runs the radar engine, fetches live data, scores opportunities, generates reports, fires notifications |
 | Deep document research | **Gemini** | Processes 10-Ks, earnings transcripts, PDFs that exceed normal context — surfaces non-consensus signals |
 
+### Python Backend Tools
+
+```bash
+# Stock price + technical analysis (RSI, MACD, Bollinger)
+python3 backend/stock_data.py TICKER
+python3 backend/stock_data.py TICKER --json
+
+# SEC EDGAR catalyst scanner — monitors watchlist for recent filings
+python3 backend/sec_scanner.py
+python3 backend/sec_scanner.py --tickers AAPL NVDA PLTR --days 30
+python3 backend/sec_scanner.py --json
+```
+
+`stock_data.py` returns: price, market_cap, pe_trailing, pe_forward, ps_ttm, pfcf, ev_ebitda, gross_margin, rev_growth_yoy, beta, short_pct, analyst_count, rsi_14, macd, bollinger, avg_volume.
+
+`sec_scanner.py` monitors filings via `data.sec.gov/submissions` (free, no API key). Flags 8-Ks, 10-Qs, S-1s by catalyst category: M&A, government contract, FDA/regulatory, financing, partnership, corporate event.
+
 ---
 
 ## Notifications
