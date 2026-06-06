@@ -21,7 +21,15 @@ router.post('/', async (req: Request, res: Response) => {
   const skipPersist = req.body.skip_persist === true
 
   try {
-    const supabase = skipPersist ? null : getSupabaseAdmin()
+    let supabase = null
+    if (!skipPersist) {
+      try {
+        supabase = getSupabaseAdmin()
+      } catch {
+        console.warn('[radar] No SUPABASE_SERVICE_ROLE_KEY — skipping persist')
+        skipPersist = true
+      }
+    }
     const userId = req.body.user_id || 'radar-server'
 
     // Phase 1 — Research

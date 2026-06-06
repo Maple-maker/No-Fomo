@@ -8,6 +8,7 @@ final class FeedViewModel: ObservableObject {
     @Published var isScanning = false
     @Published var hasMore = true
     @Published var errorMessage: String? = nil
+    @Published var searchText = ""
 
     private var page = 0
     private let pageSize = 15
@@ -20,25 +21,13 @@ final class FeedViewModel: ObservableObject {
 
         do {
             let results = try await SupabaseService.shared.fetchFeed(isPremium: isPremium, limit: pageSize, offset: 0)
-            if results.isEmpty {
-                // Database is empty — seed it, then retry
-                try? await SupabaseService.shared.seedOpportunities()
-                let retry = try? await SupabaseService.shared.fetchFeed(isPremium: isPremium, limit: pageSize, offset: 0)
-                if let retryResults = retry, !retryResults.isEmpty {
-                    opportunities = retryResults
-                    hasMore = retryResults.count == pageSize
-                } else {
-                    // Supabase empty — fall back to local mocks
-                    opportunities = Opportunity.mocks
-                }
-            } else {
-                opportunities = results
-                hasMore = results.count == pageSize
-            }
+            opportunities = results
+            hasMore = results.count == pageSize
         } catch {
-            // Network/server error — use mock data
             print("[feed] Supabase error: \(error.localizedDescription)")
-            opportunities = Opportunity.mocks
+            // Don't seed mocks — show empty state instead
+            opportunities = []
+            hasMore = false
         }
 
         isLoading = false
@@ -57,6 +46,27 @@ final class FeedViewModel: ObservableObject {
             hasMore = false
         }
         isLoading = false
+    }
+
+    /// Scan a new ticker via the radar server
+    func scanTicker(_ ticker: String) async {
+        let cleaned = ticker.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            .replacingOccurrences(of: "$", with: "")
+        guard !cleaned.isEmpty else { return }
+
+        isScanning = true
+        errorMessage = nil
+
+        do {
+            let result = try await APIService.shared.scanTicker(cleaned)
+            // Insert at top of feed
+            opportunities.insert(result, at: 0)
+            searchText = ""
+        } catch {
+            errorMessage = "Scan failed: \(error.localizedDescription)"
+        }
+
+        isScanning = false
     }
 
     func toggleWatchlist(_ opportunity: Opportunity) async {
