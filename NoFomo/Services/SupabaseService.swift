@@ -107,21 +107,6 @@ final class SupabaseService {
         ])
         _ = try await session.data(for: req)
     }
-
-    // MARK: - Seed data (posts to radar_opportunities)
-
-    func seedOpportunities() async throws {
-        let rows = Opportunity.mocks.map { $0.toRadarRow() }
-        for row in rows {
-            var req = URLRequest(url: baseURL.appendingPathComponent("/rest/v1/radar_opportunities"))
-            req.httpMethod = "POST"
-            req.addCommonHeaders()
-            req.setValue("return=minimal", forHTTPHeaderField: "Prefer")
-            req.httpBody = try JSONEncoder().encode(row)
-            let (_, response) = try await session.data(for: req)
-            try validate(response: response, data: nil)
-        }
-    }
 }
 
 // MARK: - Radar table row (matches radar_opportunities schema)

@@ -5,7 +5,7 @@ struct WatchlistView: View {
     @State private var detailOpp: Opportunity? = nil
 
     private var items: [Opportunity] {
-        Opportunity.mocks.filter { savedIDs.contains($0.id) }
+        []  // Real watchlist will sync from Supabase later
     }
 
     var body: some View {
