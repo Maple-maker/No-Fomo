@@ -69,7 +69,7 @@ final class APIService {
             companyName: radar.ticker,
             sector: "",
             tier: radar.tier,
-            score: radar.score,
+            score: Double(radar.score),
             tripleSignal: radar.tripleSignal ?? false,
             bluf: radar.bluf ?? "\(radar.ticker) scored \(radar.score)/100",
             price: radar.price ?? 0,
