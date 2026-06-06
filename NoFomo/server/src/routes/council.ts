@@ -1,6 +1,5 @@
 import { Router, type Request, type Response } from 'express'
-import { getDeepSeekClient, getAnthropicClient, getGeminiClient } from '../agents/client'
-import { DEEPSEEK_MODEL, ANTHROPIC_MODEL, GEMINI_MODEL } from '../agents/client'
+import { getDeepSeekClient, callClaude, callGemini, getDeepSeekModel } from '../agents/client'
 import type { CouncilVerdict, CIOArbiter } from '../agents/types'
 
 const router = Router()
@@ -49,13 +48,15 @@ export async function runCouncil(dossier: string): Promise<{
 
   const userPrompt = `Here is the radar research dossier:\n\n${truncatedDossier}\n\nDeliver your verdict as JSON: {"verdict": "BULL" | "BEAR", "reasoning": "..."}`
 
-  // Run Gemini and DeepSeek in parallel
-  const [geminiResult, deepseekResult] = await Promise.all([
-    callGemini(COUNCIL_PROMPT, userPrompt),
-    callDeepSeek(COUNCIL_PROMPT, userPrompt),
-  ])
+  // Run Gemini and DeepSeek sequentially (free tier ~1 RPM rate limit)
+  const geminiResult = await callGemini(COUNCIL_PROMPT, userPrompt).then(parseVerdict)
+  console.log(`[council] Gemini: ${geminiResult.verdict}`)
 
-  console.log(`[council] Gemini: ${geminiResult.verdict}, DeepSeek: ${deepseekResult.verdict}`)
+  // Rate limit gap for free tier (~1 RPM)
+  await new Promise(r => setTimeout(r, 2000))
+
+  const deepseekResult = await callDeepSeek(COUNCIL_PROMPT, userPrompt)
+  console.log(`[council] DeepSeek: ${deepseekResult.verdict}`)
 
   // CIO arbiter — Claude reads both verdicts
   const cioUserPrompt = `## Radar Dossier
@@ -78,7 +79,8 @@ Deliver your final CIO verdict as JSON:
   "tripleSignal": true | false
 }`
 
-  const cioResult = await callClaude(CIO_PROMPT, cioUserPrompt)
+  const cioText = await callClaude(CIO_PROMPT, cioUserPrompt)
+  const cioResult = parseCIO(cioText)
   console.log(`[council] CIO: ${cioResult.verdict}, Tier ${cioResult.tier}, Score ${cioResult.score}`)
 
   return {
@@ -88,66 +90,38 @@ Deliver your final CIO verdict as JSON:
   }
 }
 
-async function callGemini(systemPrompt: string, userPrompt: string): Promise<CouncilVerdict> {
-  try {
-    const client = getGeminiClient()
-    const result = await client.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-      config: { temperature: 0.3, maxOutputTokens: 1024 },
-    })
-    const text =
-      result.candidates?.[0]?.content?.parts
-        ?.filter((p: { text?: string }) => p.text)
-        .map((p: { text?: string }) => p.text)
-        .join('\n') ?? ''
-    return parseVerdict(text)
-  } catch (err) {
-    console.error('[council] Gemini error:', err)
-    return { verdict: 'BULL', reasoning: 'Gemini API error — defaulting to BULL.' }
-  }
-}
-
 async function callDeepSeek(systemPrompt: string, userPrompt: string): Promise<CouncilVerdict> {
-  try {
-    const client = getDeepSeekClient()
-    const response = await client.chat.completions.create({
-      model: DEEPSEEK_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.3,
-      max_tokens: 1024,
-    })
-    const text = response.choices[0]?.message.content || ''
-    return parseVerdict(text)
-  } catch (err) {
-    console.error('[council] DeepSeek error:', err)
-    return { verdict: 'BEAR', reasoning: 'DeepSeek API error — defaulting to BEAR.' }
+  // Retry with backoff for rate limits (free tier ~1 RPM)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      const wait = 5000 * Math.pow(2, attempt - 1)
+      console.log(`[council] DeepSeek retry ${attempt + 1} after ${wait}ms`)
+      await new Promise(r => setTimeout(r, wait))
+    }
+    try {
+      const client = getDeepSeekClient()
+      const response = await client.chat.completions.create({
+        model: getDeepSeekModel(),
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.3,
+        max_tokens: 1024,
+      })
+      const text = response.choices[0]?.message.content || ''
+      return parseVerdict(text)
+    } catch (err: any) {
+      const isRateLimit = err?.status === 429 || err?.message?.includes('429')
+      if (isRateLimit && attempt < 2) {
+        console.error(`[council] DeepSeek rate limited (attempt ${attempt + 1})`)
+        continue
+      }
+      console.error('[council] DeepSeek error:', err)
+      return { verdict: 'BEAR', reasoning: 'DeepSeek API error — defaulting to BEAR.' }
+    }
   }
-}
-
-async function callClaude(systemPrompt: string, userPrompt: string): Promise<CIOArbiter> {
-  try {
-    const client = getAnthropicClient()
-    const response = await client.messages.create({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 1024,
-      temperature: 0.3,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    })
-    const text = response.content
-      .filter(block => block.type === 'text')
-      .map(block => (block as { type: 'text'; text: string }).text)
-      .join('\n')
-
-    return parseCIO(text)
-  } catch (err) {
-    console.error('[council] Claude error:', err)
-    return { verdict: 'BULL', synthesis: 'Claude API error — defaulting.', tier: 2, score: 50, tripleSignal: false }
-  }
+  return { verdict: 'BEAR', reasoning: 'DeepSeek exhausted retries.' }
 }
 
 function parseVerdict(text: string): CouncilVerdict {

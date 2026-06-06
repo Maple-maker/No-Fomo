@@ -1,7 +1,7 @@
 import type { AgentDef, AgentContext, AgentResult, ChatMessage } from './types'
 import { createMemory } from './memory'
 import { createToolRegistry } from './tools'
-import { getDeepSeekClient, DEEPSEEK_MODEL } from './client'
+import { getDeepSeekClient, getDeepSeekModel } from './client'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toOpenAIMessages(msgs: ChatMessage[]): any[] {
@@ -36,7 +36,7 @@ export async function runAgent(
     const msgs = memory.getMessages()
 
     const response = await client.chat.completions.create({
-      model: DEEPSEEK_MODEL,
+      model: getDeepSeekModel(),
       messages: toOpenAIMessages(msgs),
       tools: toolRegistry.getOpenAITools(),
       temperature: 0.3,
@@ -89,7 +89,7 @@ export async function runAgent(
   )
   const finalMsgs = memory.getMessages()
   const finalResponse = await client.chat.completions.create({
-    model: DEEPSEEK_MODEL,
+    model: getDeepSeekModel(),
     messages: toOpenAIMessages(finalMsgs),
     temperature: 0.3,
     max_tokens: 4096,
