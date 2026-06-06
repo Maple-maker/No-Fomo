@@ -20,6 +20,7 @@
 		D6F8B7E68387097110186780 /* Opportunity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AED69B56E62BD1D10DA05A8 /* Opportunity.swift */; };
 		DE71ECC1CEBB4BDAD5E35F3A /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C337A007FEFFFDC8586913F /* SupabaseService.swift */; };
 		EA04BB641451EDA6E1916D4B /* WatchlistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A11E1CC5698E343B7C5715 /* WatchlistView.swift */; };
+		BBCCDDEEFF00112233445566 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCCDDEEFF001122334455 /* APIService.swift */; };
 		EB11C0CF0ACFD31AC6C0FDEF /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D585EB41609BFCCB3ADD2F /* FeedView.swift */; };
 		F0B150D84249BFD22E256E30 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDF3B6805394A686B36EF500 /* AuthService.swift */; };
 /* End PBXBuildFile section */
@@ -41,6 +42,7 @@
 		EDF3B6805394A686B36EF500 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		F0A11E1CC5698E343B7C5715 /* WatchlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistView.swift; sourceTree = "<group>"; };
 		F31DE7AFADECAD3E94298B66 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		AABBCCDDEEFF001122334455 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -89,6 +91,7 @@
 			children = (
 				EDF3B6805394A686B36EF500 /* AuthService.swift */,
 				2C337A007FEFFFDC8586913F /* SupabaseService.swift */,
+				AABBCCDDEEFF001122334455 /* APIService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -255,6 +258,7 @@
 				DE71ECC1CEBB4BDAD5E35F3A /* SupabaseService.swift in Sources */,
 				D4C8CEE87BFB2BA12621CBA9 /* User.swift in Sources */,
 				EA04BB641451EDA6E1916D4B /* WatchlistView.swift in Sources */,
+				BBCCDDEEFF00112233445566 /* APIService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -397,6 +401,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_NSAppTransportSecurity = "{NSAllowsArbitraryLoads = true;}";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -421,6 +426,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_NSAppTransportSecurity = "{NSAllowsArbitraryLoads = true;}";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
