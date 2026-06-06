@@ -26,6 +26,11 @@ struct FeedView: View {
             DS.Color.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
+                // Nuclear: ensure no stale data on launch
+                Color.clear.onAppear {
+                    vm.opportunities = []
+                    print("[FEED] ✅ Mocks killed. Starting empty. No PLTR/MSTR in this build.")
+                }
                 // Search bar
                 HStack(spacing: 10) {
                     HStack(spacing: 8) {
