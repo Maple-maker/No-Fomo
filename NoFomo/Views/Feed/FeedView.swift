@@ -210,40 +210,43 @@ struct FeedView: View {
         }
         return result
     }
-// MARK: — Feed header
-    private struct FeedHeader: View {
-        let count: Int
+}
 
-        var body: some View {
-            HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("No Fomo")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(.white)
-                        .tracking(-0.5)
-                    Text(count > 0 ? "\(count) opportunities" : "Scan a ticker to start")
-                        .font(.system(size: 12))
-                        .foregroundColor(DS.Color.textMuted)
-                }
-                Spacer()
-                Circle()
-                    .fill(DS.Color.elevated)
-                    .frame(width: 34, height: 34)
-                    .overlay(
-                        Circle()
-                            .stroke(DS.Color.border, lineWidth: 0.5)
-                    )
-                    .overlay(
-                        Text("JD")
-                            .font(DS.Font.mono(13))
-                            .foregroundColor(DS.Color.textSecondary)
-                    )
+// MARK: - Feed header
+
+struct FeedHeader: View {
+    let count: Int
+
+    var body: some View {
+        HStack(alignment: .bottom) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("No Fomo")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.white)
+                    .tracking(-0.5)
+                Text(count > 0 ? "\(count) opportunities" : "Scan a ticker to start")
+                    .font(.system(size: 12))
+                    .foregroundColor(DS.Color.textMuted)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-            .padding(.bottom, 14)
+            Spacer()
+            Circle()
+                .fill(DS.Color.elevated)
+                .frame(width: 34, height: 34)
+                .overlay(
+                    Circle()
+                        .stroke(DS.Color.border, lineWidth: 0.5)
+                )
+                .overlay(
+                    Text("JD")
+                        .font(DS.Font.mono(13))
+                        .foregroundColor(DS.Color.textSecondary)
+                )
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 14)
     }
+}
 
 // MARK: - Filter chips
 
