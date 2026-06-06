@@ -425,6 +425,7 @@ struct FinancialSnapshot: Codable {
 
 // MARK: - Factory
 
+extension Opportunity {
     private static func makeMock(
         id: String, tier: Int, ticker: String, name: String, sector: String,
         score: Double, tripleSignal: Bool, bluf: String,
