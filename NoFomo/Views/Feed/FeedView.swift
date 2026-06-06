@@ -245,7 +245,7 @@ struct FeedView: View {
         }
     }
 
-// MARK: — Filter chips
+// MARK: - Filter chips
 
 struct FilterChips: View {
     let filters: [(id: String, label: String, bolt: Bool)]
@@ -290,10 +290,4 @@ struct FilterChips: View {
             .padding(.horizontal, 20)
         }
     }
-}
-
-#Preview {
-    FeedView()
-        .environmentObject(AuthService.shared)
-        .preferredColorScheme(.dark)
 }
