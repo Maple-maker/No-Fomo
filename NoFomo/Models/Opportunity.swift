@@ -122,6 +122,22 @@ struct Opportunity: Identifiable, Codable {
     var detectionLane: String?
     var governmentScore: Int?
 
+    // ── Restored (additive) fields used by DetailSheet ──
+    var councilSummary: String? = nil
+    var competitiveAdvantages: String? = nil
+    var investmentRisks: String? = nil
+    var keyMetrics: KeyMetricsData? = nil
+    var insiderTotalBuys: Int = 0
+    var insiderTotalSells: Int = 0
+    var insiderBuyVolume: Int = 0
+    var insiderSellVolume: Int = 0
+    var insiderBuyingNames: [String] = []
+    var insiderSellingNames: [String] = []
+    var insiderClusterScore: Int = 0
+    var insiderNetSentiment: String = ""
+    var insiderSignal: String = ""
+    var insiderTransactions: [[String]] = []
+
     // MARK: Memberwise init (for mock data)
     init(id: String, ticker: String, companyName: String, sector: String = "", tier: Int,
          score: Double = 0, tripleSignal: Bool = false, bluf: String,
@@ -297,6 +313,21 @@ struct Opportunity: Identifiable, Codable {
         overlookedAnalysis = try c.decodeIfPresent(String.self, forKey: .overlookedAnalysis)
         detectionLane = try c.decodeIfPresent(String.self, forKey: .detectionLane)
         governmentScore = try c.decodeIfPresent(Int.self, forKey: .governmentScore)
+        // ── Restored (additive) fields ──
+        councilSummary = try c.decodeIfPresent(String.self, forKey: .councilSummary)
+        competitiveAdvantages = try c.decodeIfPresent(String.self, forKey: .competitiveAdvantages)
+        investmentRisks = try c.decodeIfPresent(String.self, forKey: .investmentRisks)
+        keyMetrics = try c.decodeIfPresent(KeyMetricsData.self, forKey: .keyMetrics)
+        insiderTotalBuys = try c.decodeIfPresent(Int.self, forKey: .insiderTotalBuys) ?? 0
+        insiderTotalSells = try c.decodeIfPresent(Int.self, forKey: .insiderTotalSells) ?? 0
+        insiderBuyVolume = try c.decodeIfPresent(Int.self, forKey: .insiderBuyVolume) ?? 0
+        insiderSellVolume = try c.decodeIfPresent(Int.self, forKey: .insiderSellVolume) ?? 0
+        insiderBuyingNames = try c.decodeIfPresent([String].self, forKey: .insiderBuyingNames) ?? []
+        insiderSellingNames = try c.decodeIfPresent([String].self, forKey: .insiderSellingNames) ?? []
+        insiderClusterScore = try c.decodeIfPresent(Int.self, forKey: .insiderClusterScore) ?? 0
+        insiderNetSentiment = try c.decodeIfPresent(String.self, forKey: .insiderNetSentiment) ?? ""
+        insiderSignal = try c.decodeIfPresent(String.self, forKey: .insiderSignal) ?? ""
+        insiderTransactions = try c.decodeIfPresent([[String]].self, forKey: .insiderTransactions) ?? []
     }
 
     enum CodingKeys: String, CodingKey {
@@ -386,6 +417,20 @@ struct Opportunity: Identifiable, Codable {
         case overlookedAnalysis = "overlooked_analysis"
         case detectionLane = "detection_lane"
         case governmentScore = "government_score"
+        case councilSummary = "council_summary"
+        case competitiveAdvantages = "competitive_advantages"
+        case investmentRisks = "investment_risks"
+        case keyMetrics = "key_metrics"
+        case insiderTotalBuys = "insider_total_buys"
+        case insiderTotalSells = "insider_total_sells"
+        case insiderBuyVolume = "insider_buy_volume"
+        case insiderSellVolume = "insider_sell_volume"
+        case insiderBuyingNames = "insider_buying_names"
+        case insiderSellingNames = "insider_selling_names"
+        case insiderClusterScore = "insider_cluster_score"
+        case insiderNetSentiment = "insider_net_sentiment"
+        case insiderSignal = "insider_signal"
+        case insiderTransactions = "insider_transactions"
     }
 }
 
@@ -423,6 +468,25 @@ struct FinancialSnapshot: Codable {
     }
 }
 
+// MARK: - Key metrics (Qualtrim-style financial summary)
+
+struct KeyMetricsData: Codable {
+    let revenue: String?
+    let netIncome: String?
+    let eps: String?
+    let peTrailing: String?
+    let peForward: String?
+    let evEbitda: String?
+    let grossMargin: String?
+    let operatingMargin: String?
+    let cashAndEquivalents: String?
+    let totalDebt: String?
+    let dividendYield: String?
+}
+
 // MARK: - Factory
 
-extension Opportunity {}
+extension Opportunity {
+    // Feed falls back to live Supabase data; mocks intentionally empty (no fabricated rows).
+    static let mocks: [Opportunity] = []
+}

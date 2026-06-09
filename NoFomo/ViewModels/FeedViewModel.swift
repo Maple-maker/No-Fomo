@@ -9,6 +9,7 @@ final class FeedViewModel: ObservableObject {
     @Published var hasMore = true
     @Published var errorMessage: String? = nil
     @Published var searchText = ""
+    @Published var serverOnline = false
 
     private var page = 0
     private let pageSize = 15
@@ -49,7 +50,7 @@ final class FeedViewModel: ObservableObject {
     }
 
     /// Scan a new ticker via the radar server
-    func scanTicker(_ ticker: String) async {
+    func scanTicker(_ ticker: String, isPremium: Bool = false) async {
         let cleaned = ticker.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
             .replacingOccurrences(of: "$", with: "")
         guard !cleaned.isEmpty else { return }

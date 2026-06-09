@@ -17,7 +17,12 @@ targets:
     type: application
     platform: iOS
     sources:
-      - path: NoFomo
+      - path: NoFomo/NoFomoApp.swift
+      - path: NoFomo/Models
+      - path: NoFomo/Components
+      - path: NoFomo/Services
+      - path: NoFomo/ViewModels
+      - path: NoFomo/Views
     settings:
       base:
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES

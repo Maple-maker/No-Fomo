@@ -7,105 +7,83 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		01E2947B250CEE3DF9918EAF /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ED9FBBB986D69FDEC0921F7 /* AuthService.swift */; };
 		08B8E5FF26B385BCC450365B /* Opportunity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94DE1395D92089EE94874B35 /* Opportunity.swift */; };
+		112ED94D75861053978F3703 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3162963DFACE050469115305 /* OnboardingView.swift */; };
+		154F47ED441D7FF9FD3FD1D3 /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EBCD50451AC8F550D98A85A /* FeedViewModel.swift */; };
+		174B9EC2C7EA985510875F4C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F1E2F1ED44755ACE830E3BA /* SettingsView.swift */; };
 		209769E803EB8D2481340748 /* ScoreGauge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66320A7AE59F23AC239912E8 /* ScoreGauge.swift */; };
-		25D9EA603F067040E6E29952 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F31DE7AFADECAD3E94298B66 /* MainTabView.swift */; };
+		331A3661E13A28EE1EE39085 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68DFBC48ECD19B3B50B4BC40 /* APIService.swift */; };
+		347852B48074520EB5ABAF9B /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8E53A699D1CFE92FB87A1C6 /* MainTabView.swift */; };
 		36BF10B820C4FECD791D70BF /* OpportunityCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55C93C85747164B1527C470A /* OpportunityCard.swift */; };
-		4FE1E0C8845543EDF5A109D9 /* RadarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E9B291629037B33D7094658 /* RadarService.swift */; };
-		5BAC3A0513132943ADF9BB40 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6561F3C122DAFF5EA390EF52 /* SettingsView.swift */; };
 		66223C64FD0EE342D3F79820 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1722F554E441792CED1F56F1 /* DesignSystem.swift */; };
 		7228F9C198A05954E6A79C9D /* NoFomoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69CCD19F858D21E300342D69 /* NoFomoApp.swift */; };
-		8D9B2B0C0CCCC311677EBF89 /* DetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE8DE04A9BDB33B1C81A1FD6 /* DetailSheet.swift */; };
-		936CAC2FA8A0B6D527282BA3 /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C154EB6550B71DC35B95E757 /* FeedViewModel.swift */; };
-		B80580986E58A2FB8FB06783 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A58A572CA07BBDF8FF729D /* OnboardingView.swift */; };
+		B53375707CB46FB24120A72B /* WatchlistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9FFA93E4D0ECA788E8CFD9C /* WatchlistView.swift */; };
+		B7EAD6C1E4E49A167DA9DDC8 /* DetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62374B6D7F123A32D9561EE5 /* DetailSheet.swift */; };
+		CA28AD02CA00B5F754C84A62 /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0918E42D50C4EE4301F69F4D /* SupabaseService.swift */; };
 		CD4FCFBCA9975D45397EC64C /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD917061A41426CD73547716 /* User.swift */; };
 		D84893E997C772D6CDC2F340 /* TickerLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBEFE20B18E1F74532754F1E /* TickerLogo.swift */; };
-		DE71ECC1CEBB4BDAD5E35F3A /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C337A007FEFFFDC8586913F /* SupabaseService.swift */; };
-		E57E48901C94FFFD75ED0F53 /* TAChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8DA353DA94D83D33C16FB39 /* TAChartView.swift */; };
-		EA04BB641451EDA6E1916D4B /* WatchlistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A11E1CC5698E343B7C5715 /* WatchlistView.swift */; };
-		EB11C0CF0ACFD31AC6C0FDEF /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D585EB41609BFCCB3ADD2F /* FeedView.swift */; };
-		F0B150D84249BFD22E256E30 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDF3B6805394A686B36EF500 /* AuthService.swift */; };
+		F63D1978D4E942129E0F806C /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63E3EF6A5E780366C1D65A1F /* FeedView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0918E42D50C4EE4301F69F4D /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
+		0ED9FBBB986D69FDEC0921F7 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		0F1E2F1ED44755ACE830E3BA /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		1722F554E441792CED1F56F1 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
-		23D585EB41609BFCCB3ADD2F /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
-		2C337A007FEFFFDC8586913F /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
+		2EBCD50451AC8F550D98A85A /* FeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedViewModel.swift; sourceTree = "<group>"; };
+		3162963DFACE050469115305 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		55C93C85747164B1527C470A /* OpportunityCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpportunityCard.swift; sourceTree = "<group>"; };
-		6561F3C122DAFF5EA390EF52 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		62374B6D7F123A32D9561EE5 /* DetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailSheet.swift; sourceTree = "<group>"; };
+		63E3EF6A5E780366C1D65A1F /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		66320A7AE59F23AC239912E8 /* ScoreGauge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreGauge.swift; sourceTree = "<group>"; };
+		68DFBC48ECD19B3B50B4BC40 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		69CCD19F858D21E300342D69 /* NoFomoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoFomoApp.swift; sourceTree = "<group>"; };
 		91B25AAA5555B7B58BD36DF9 /* NoFomo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NoFomo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		94DE1395D92089EE94874B35 /* Opportunity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Opportunity.swift; sourceTree = "<group>"; };
-		9E9B291629037B33D7094658 /* RadarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarService.swift; sourceTree = "<group>"; };
+		A9FFA93E4D0ECA788E8CFD9C /* WatchlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistView.swift; sourceTree = "<group>"; };
 		BD917061A41426CD73547716 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
-		C154EB6550B71DC35B95E757 /* FeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedViewModel.swift; sourceTree = "<group>"; };
-		D4A58A572CA07BBDF8FF729D /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
-		D8DA353DA94D83D33C16FB39 /* TAChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TAChartView.swift; sourceTree = "<group>"; };
 		DBEFE20B18E1F74532754F1E /* TickerLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TickerLogo.swift; sourceTree = "<group>"; };
-		DE8DE04A9BDB33B1C81A1FD6 /* DetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailSheet.swift; sourceTree = "<group>"; };
-		EDF3B6805394A686B36EF500 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
-		F0A11E1CC5698E343B7C5715 /* WatchlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistView.swift; sourceTree = "<group>"; };
-		F31DE7AFADECAD3E94298B66 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		E8E53A699D1CFE92FB87A1C6 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
-		06FD8186BFAE23D416DEB5C9 /* Watchlist */ = {
+		0CC5A2E1AD4C1E89654271F0 /* Feed */ = {
 			isa = PBXGroup;
 			children = (
-				F0A11E1CC5698E343B7C5715 /* WatchlistView.swift */,
-			);
-			path = Watchlist;
-			sourceTree = "<group>";
-		};
-		074F77FE376819953F72D779 /* Settings */ = {
-			isa = PBXGroup;
-			children = (
-				6561F3C122DAFF5EA390EF52 /* SettingsView.swift */,
-			);
-			path = Settings;
-			sourceTree = "<group>";
-		};
-		2B39DB2862BF8C7CD90A82A4 /* Onboarding */ = {
-			isa = PBXGroup;
-			children = (
-				D4A58A572CA07BBDF8FF729D /* OnboardingView.swift */,
-			);
-			path = Onboarding;
-			sourceTree = "<group>";
-		};
-		2E0209085DFB9A07BB60D9F2 /* Feed */ = {
-			isa = PBXGroup;
-			children = (
-				23D585EB41609BFCCB3ADD2F /* FeedView.swift */,
+				63E3EF6A5E780366C1D65A1F /* FeedView.swift */,
 			);
 			path = Feed;
 			sourceTree = "<group>";
 		};
-		3B37B098250D3C34F643E168 /* Detail */ = {
+		24B06F3FAB7322FB40C017C9 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				DE8DE04A9BDB33B1C81A1FD6 /* DetailSheet.swift */,
+				0F1E2F1ED44755ACE830E3BA /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		2DE40C199EA71386C357715A /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				E8E53A699D1CFE92FB87A1C6 /* MainTabView.swift */,
+				4560B36D283C8E0DFF2802B5 /* Detail */,
+				0CC5A2E1AD4C1E89654271F0 /* Feed */,
+				7338026D5689B8A8DF07AB87 /* Onboarding */,
+				24B06F3FAB7322FB40C017C9 /* Settings */,
+				ED97D0023A1F398DB6DEAC88 /* Watchlist */,
+			);
+			name = Views;
+			path = NoFomo/Views;
+			sourceTree = "<group>";
+		};
+		4560B36D283C8E0DFF2802B5 /* Detail */ = {
+			isa = PBXGroup;
+			children = (
+				62374B6D7F123A32D9561EE5 /* DetailSheet.swift */,
 			);
 			path = Detail;
-			sourceTree = "<group>";
-		};
-		3E0DEC458A89903790A58825 /* Services */ = {
-			isa = PBXGroup;
-			children = (
-				EDF3B6805394A686B36EF500 /* AuthService.swift */,
-				9E9B291629037B33D7094658 /* RadarService.swift */,
-				2C337A007FEFFFDC8586913F /* SupabaseService.swift */,
-			);
-			path = Services;
-			sourceTree = "<group>";
-		};
-		57C43AE873A42401672446D9 /* ViewModels */ = {
-			isa = PBXGroup;
-			children = (
-				C154EB6550B71DC35B95E757 /* FeedViewModel.swift */,
-			);
-			path = ViewModels;
 			sourceTree = "<group>";
 		};
 		6A9ADB8A1C5FCF2B99B61B34 = {
@@ -114,38 +92,36 @@
 				A1613852153A8F2BEA1D0EA6 /* Components */,
 				F6A917A50BE11783D85A0ED4 /* Models */,
 				71F7108628AA088007EA2249 /* NoFomo */,
-				3E0DEC458A89903790A58825 /* Services */,
-				57C43AE873A42401672446D9 /* ViewModels */,
-				89F0F46AFF8B4360CF9B630D /* Views */,
+				E07735185BD3A01A73CE0A69 /* Services */,
+				6D48537624D3A669732E4620 /* ViewModels */,
+				2DE40C199EA71386C357715A /* Views */,
 				B02ABCE5A7B2B462CF828A87 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		6D48537624D3A669732E4620 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				2EBCD50451AC8F550D98A85A /* FeedViewModel.swift */,
+			);
+			name = ViewModels;
+			path = NoFomo/ViewModels;
 			sourceTree = "<group>";
 		};
 		71F7108628AA088007EA2249 /* NoFomo */ = {
 			isa = PBXGroup;
 			children = (
 				69CCD19F858D21E300342D69 /* NoFomoApp.swift */,
-				A1613852153A8F2BEA1D0EA6 /* Components */,
-				F6A917A50BE11783D85A0ED4 /* Models */,
-				3E0DEC458A89903790A58825 /* Services */,
-				57C43AE873A42401672446D9 /* ViewModels */,
-				89F0F46AFF8B4360CF9B630D /* Views */,
 			);
-			name = NoFomo;
-			path = .;
+			path = NoFomo;
 			sourceTree = "<group>";
 		};
-		89F0F46AFF8B4360CF9B630D /* Views */ = {
+		7338026D5689B8A8DF07AB87 /* Onboarding */ = {
 			isa = PBXGroup;
 			children = (
-				F31DE7AFADECAD3E94298B66 /* MainTabView.swift */,
-				3B37B098250D3C34F643E168 /* Detail */,
-				2E0209085DFB9A07BB60D9F2 /* Feed */,
-				2B39DB2862BF8C7CD90A82A4 /* Onboarding */,
-				074F77FE376819953F72D779 /* Settings */,
-				06FD8186BFAE23D416DEB5C9 /* Watchlist */,
+				3162963DFACE050469115305 /* OnboardingView.swift */,
 			);
-			path = Views;
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		A1613852153A8F2BEA1D0EA6 /* Components */ = {
@@ -154,10 +130,10 @@
 				1722F554E441792CED1F56F1 /* DesignSystem.swift */,
 				55C93C85747164B1527C470A /* OpportunityCard.swift */,
 				66320A7AE59F23AC239912E8 /* ScoreGauge.swift */,
-				D8DA353DA94D83D33C16FB39 /* TAChartView.swift */,
 				DBEFE20B18E1F74532754F1E /* TickerLogo.swift */,
 			);
-			path = Components;
+			name = Components;
+			path = NoFomo/Components;
 			sourceTree = "<group>";
 		};
 		B02ABCE5A7B2B462CF828A87 /* Products */ = {
@@ -168,13 +144,33 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		E07735185BD3A01A73CE0A69 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				68DFBC48ECD19B3B50B4BC40 /* APIService.swift */,
+				0ED9FBBB986D69FDEC0921F7 /* AuthService.swift */,
+				0918E42D50C4EE4301F69F4D /* SupabaseService.swift */,
+			);
+			name = Services;
+			path = NoFomo/Services;
+			sourceTree = "<group>";
+		};
+		ED97D0023A1F398DB6DEAC88 /* Watchlist */ = {
+			isa = PBXGroup;
+			children = (
+				A9FFA93E4D0ECA788E8CFD9C /* WatchlistView.swift */,
+			);
+			path = Watchlist;
+			sourceTree = "<group>";
+		};
 		F6A917A50BE11783D85A0ED4 /* Models */ = {
 			isa = PBXGroup;
 			children = (
 				94DE1395D92089EE94874B35 /* Opportunity.swift */,
 				BD917061A41426CD73547716 /* User.swift */,
 			);
-			path = Models;
+			name = Models;
+			path = NoFomo/Models;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -184,6 +180,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 062F0C5654E0FCF3CA20C7A7 /* Build configuration list for PBXNativeTarget "NoFomo" */;
 			buildPhases = (
+				D1F61A94A9DE8EA9B73CFF1C /* SwiftLint */,
 				2A41ECA04484FB37099BC341 /* Sources */,
 			);
 			buildRules = (
@@ -204,7 +201,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2600;
 				TargetAttributes = {
 				};
 			};
@@ -227,29 +224,50 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		D1F61A94A9DE8EA9B73CFF1C /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint > /dev/null; then\n  swiftlint\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		2A41ECA04484FB37099BC341 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F0B150D84249BFD22E256E30 /* AuthService.swift in Sources */,
+				331A3661E13A28EE1EE39085 /* APIService.swift in Sources */,
+				01E2947B250CEE3DF9918EAF /* AuthService.swift in Sources */,
 				66223C64FD0EE342D3F79820 /* DesignSystem.swift in Sources */,
-				8D9B2B0C0CCCC311677EBF89 /* DetailSheet.swift in Sources */,
-				EB11C0CF0ACFD31AC6C0FDEF /* FeedView.swift in Sources */,
-				936CAC2FA8A0B6D527282BA3 /* FeedViewModel.swift in Sources */,
-				25D9EA603F067040E6E29952 /* MainTabView.swift in Sources */,
+				B7EAD6C1E4E49A167DA9DDC8 /* DetailSheet.swift in Sources */,
+				F63D1978D4E942129E0F806C /* FeedView.swift in Sources */,
+				154F47ED441D7FF9FD3FD1D3 /* FeedViewModel.swift in Sources */,
+				347852B48074520EB5ABAF9B /* MainTabView.swift in Sources */,
 				7228F9C198A05954E6A79C9D /* NoFomoApp.swift in Sources */,
-				B80580986E58A2FB8FB06783 /* OnboardingView.swift in Sources */,
+				112ED94D75861053978F3703 /* OnboardingView.swift in Sources */,
 				08B8E5FF26B385BCC450365B /* Opportunity.swift in Sources */,
 				36BF10B820C4FECD791D70BF /* OpportunityCard.swift in Sources */,
-				4FE1E0C8845543EDF5A109D9 /* RadarService.swift in Sources */,
 				209769E803EB8D2481340748 /* ScoreGauge.swift in Sources */,
-				5BAC3A0513132943ADF9BB40 /* SettingsView.swift in Sources */,
-				DE71ECC1CEBB4BDAD5E35F3A /* SupabaseService.swift in Sources */,
-				E57E48901C94FFFD75ED0F53 /* TAChartView.swift in Sources */,
+				174B9EC2C7EA985510875F4C /* SettingsView.swift in Sources */,
+				CA28AD02CA00B5F754C84A62 /* SupabaseService.swift in Sources */,
 				D84893E997C772D6CDC2F340 /* TickerLogo.swift in Sources */,
 				CD4FCFBCA9975D45397EC64C /* User.swift in Sources */,
-				EA04BB641451EDA6E1916D4B /* WatchlistView.swift in Sources */,
+				B53375707CB46FB24120A72B /* WatchlistView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -293,6 +311,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -308,7 +327,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_VERSION = 6.0;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -350,6 +369,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -372,7 +392,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 6.0;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
@@ -382,21 +402,21 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				ENABLE_PREVIEWS = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "No Fomo";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nofomo.app;
 				SDKROOT = iphoneos;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -406,21 +426,21 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				ENABLE_PREVIEWS = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "No Fomo";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nofomo.app;
 				SDKROOT = iphoneos;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;

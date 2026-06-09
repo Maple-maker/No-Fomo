@@ -78,7 +78,10 @@ export function evaluateAsymmetry(input: AsymmetryInput): AsymmetryVerdict {
   }
 
   let upside: number | null = null
-  if (input.analystTargetMean != null && input.price != null && input.price > 0) {
+  // Only trust the analyst target when it's actually populated (>0). A missing/zero
+  // target must NOT be read as "trading above target" (that bug pruned every stock
+  // whenever the analyst feed was unavailable). Fall back to the thesis upside instead.
+  if (input.analystTargetMean != null && input.analystTargetMean > 0 && input.price != null && input.price > 0) {
     upside = ((input.analystTargetMean - input.price) / input.price) * 100
   } else if (input.structuredUpsidePct != null) {
     upside = input.structuredUpsidePct
