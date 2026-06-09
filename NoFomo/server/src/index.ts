@@ -6,6 +6,9 @@ import discoverRouter from './routes/discover'
 import cronRouter from './routes/cron'
 import sweepRouter from './routes/sweep'
 import kalshiRouter from './routes/kalshi'
+import screenRouter from './routes/screen'
+import filingsRouter from './routes/filings'
+import supplyChainRouter from './routes/supply-chain'
 
 const app = express()
 const PORT = parseInt(process.env.PORT || '3001', 10)
@@ -35,6 +38,9 @@ app.use('/radar', discoverRouter)
 app.use('/radar', cronRouter)
 app.use('/radar', sweepRouter)
 app.use('/radar', kalshiRouter)
+app.use('/radar', screenRouter)
+app.use('/radar', filingsRouter)
+app.use('/radar', supplyChainRouter)
 app.use('/council', councilRouter)
 
 // Only bind a port in local dev — on Vercel the app is exported as a serverless handler.
