@@ -64,15 +64,21 @@ struct OpportunityCard: View {
                     }
                 }
 
-                // Ticker (mono, no $ prefix)
-                Text(opportunity.ticker)
-                    .font(DS.Font.mono(21))
-                    .foregroundColor(.white)
+                // Logo + Ticker row
+                HStack(alignment: .center, spacing: 10) {
+                    TickerLogo(ticker: opportunity.ticker, size: 32)
+                    VStack(alignment: .leading, spacing: 2) {
+                        // Ticker (mono, no $ prefix)
+                        Text(opportunity.ticker)
+                            .font(DS.Font.mono(21))
+                            .foregroundColor(.white)
 
-                // Company name
-                Text(opportunity.companyName)
-                    .font(.system(size: 13))
-                    .foregroundColor(DS.Color.textSecondary)
+                        // Company name
+                        Text(opportunity.companyName)
+                            .font(.system(size: 13))
+                            .foregroundColor(DS.Color.textSecondary)
+                    }
+                }
 
                 // Sector
                 Text(opportunity.sector)

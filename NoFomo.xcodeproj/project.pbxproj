@@ -7,42 +7,46 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		16C74EB25FA4AB7B1C3965A7 /* ScoreGauge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F26682E3F42008C5EBCDAB6 /* ScoreGauge.swift */; };
+		08B8E5FF26B385BCC450365B /* Opportunity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94DE1395D92089EE94874B35 /* Opportunity.swift */; };
+		209769E803EB8D2481340748 /* ScoreGauge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66320A7AE59F23AC239912E8 /* ScoreGauge.swift */; };
 		25D9EA603F067040E6E29952 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F31DE7AFADECAD3E94298B66 /* MainTabView.swift */; };
-		4C253191746E1EF289F05CE2 /* OpportunityCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6955C1F0BE8694180E1A82 /* OpportunityCard.swift */; };
-		570740357A5928327E7A40DC /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D5FEE8E00A65DB2FAA3B066 /* DesignSystem.swift */; };
+		36BF10B820C4FECD791D70BF /* OpportunityCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55C93C85747164B1527C470A /* OpportunityCard.swift */; };
+		4FE1E0C8845543EDF5A109D9 /* RadarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E9B291629037B33D7094658 /* RadarService.swift */; };
 		5BAC3A0513132943ADF9BB40 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6561F3C122DAFF5EA390EF52 /* SettingsView.swift */; };
+		66223C64FD0EE342D3F79820 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1722F554E441792CED1F56F1 /* DesignSystem.swift */; };
 		7228F9C198A05954E6A79C9D /* NoFomoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69CCD19F858D21E300342D69 /* NoFomoApp.swift */; };
 		8D9B2B0C0CCCC311677EBF89 /* DetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE8DE04A9BDB33B1C81A1FD6 /* DetailSheet.swift */; };
 		936CAC2FA8A0B6D527282BA3 /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C154EB6550B71DC35B95E757 /* FeedViewModel.swift */; };
 		B80580986E58A2FB8FB06783 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A58A572CA07BBDF8FF729D /* OnboardingView.swift */; };
-		D4C8CEE87BFB2BA12621CBA9 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987A0A04AD7176A241AEDC34 /* User.swift */; };
-		D6F8B7E68387097110186780 /* Opportunity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AED69B56E62BD1D10DA05A8 /* Opportunity.swift */; };
+		CD4FCFBCA9975D45397EC64C /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD917061A41426CD73547716 /* User.swift */; };
+		D84893E997C772D6CDC2F340 /* TickerLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBEFE20B18E1F74532754F1E /* TickerLogo.swift */; };
 		DE71ECC1CEBB4BDAD5E35F3A /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C337A007FEFFFDC8586913F /* SupabaseService.swift */; };
+		E57E48901C94FFFD75ED0F53 /* TAChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8DA353DA94D83D33C16FB39 /* TAChartView.swift */; };
 		EA04BB641451EDA6E1916D4B /* WatchlistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A11E1CC5698E343B7C5715 /* WatchlistView.swift */; };
-		BBCCDDEEFF00112233445566 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCCDDEEFF001122334455 /* APIService.swift */; };
 		EB11C0CF0ACFD31AC6C0FDEF /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D585EB41609BFCCB3ADD2F /* FeedView.swift */; };
 		F0B150D84249BFD22E256E30 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDF3B6805394A686B36EF500 /* AuthService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0D5FEE8E00A65DB2FAA3B066 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		1722F554E441792CED1F56F1 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		23D585EB41609BFCCB3ADD2F /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		2C337A007FEFFFDC8586913F /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
-		3AED69B56E62BD1D10DA05A8 /* Opportunity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Opportunity.swift; sourceTree = "<group>"; };
-		4F26682E3F42008C5EBCDAB6 /* ScoreGauge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreGauge.swift; sourceTree = "<group>"; };
+		55C93C85747164B1527C470A /* OpportunityCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpportunityCard.swift; sourceTree = "<group>"; };
 		6561F3C122DAFF5EA390EF52 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		66320A7AE59F23AC239912E8 /* ScoreGauge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreGauge.swift; sourceTree = "<group>"; };
 		69CCD19F858D21E300342D69 /* NoFomoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoFomoApp.swift; sourceTree = "<group>"; };
 		91B25AAA5555B7B58BD36DF9 /* NoFomo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NoFomo.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		987A0A04AD7176A241AEDC34 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
-		BD6955C1F0BE8694180E1A82 /* OpportunityCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpportunityCard.swift; sourceTree = "<group>"; };
+		94DE1395D92089EE94874B35 /* Opportunity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Opportunity.swift; sourceTree = "<group>"; };
+		9E9B291629037B33D7094658 /* RadarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarService.swift; sourceTree = "<group>"; };
+		BD917061A41426CD73547716 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		C154EB6550B71DC35B95E757 /* FeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedViewModel.swift; sourceTree = "<group>"; };
 		D4A58A572CA07BBDF8FF729D /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		D8DA353DA94D83D33C16FB39 /* TAChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TAChartView.swift; sourceTree = "<group>"; };
+		DBEFE20B18E1F74532754F1E /* TickerLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TickerLogo.swift; sourceTree = "<group>"; };
 		DE8DE04A9BDB33B1C81A1FD6 /* DetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailSheet.swift; sourceTree = "<group>"; };
 		EDF3B6805394A686B36EF500 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		F0A11E1CC5698E343B7C5715 /* WatchlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistView.swift; sourceTree = "<group>"; };
 		F31DE7AFADECAD3E94298B66 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
-		AABBCCDDEEFF001122334455 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -90,8 +94,8 @@
 			isa = PBXGroup;
 			children = (
 				EDF3B6805394A686B36EF500 /* AuthService.swift */,
+				9E9B291629037B33D7094658 /* RadarService.swift */,
 				2C337A007FEFFFDC8586913F /* SupabaseService.swift */,
-				AABBCCDDEEFF001122334455 /* APIService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -104,19 +108,15 @@
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
-		6403C4523768C59C4EB51BEF /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				3AED69B56E62BD1D10DA05A8 /* Opportunity.swift */,
-				987A0A04AD7176A241AEDC34 /* User.swift */,
-			);
-			path = Models;
-			sourceTree = "<group>";
-		};
 		6A9ADB8A1C5FCF2B99B61B34 = {
 			isa = PBXGroup;
 			children = (
+				A1613852153A8F2BEA1D0EA6 /* Components */,
+				F6A917A50BE11783D85A0ED4 /* Models */,
 				71F7108628AA088007EA2249 /* NoFomo */,
+				3E0DEC458A89903790A58825 /* Services */,
+				57C43AE873A42401672446D9 /* ViewModels */,
+				89F0F46AFF8B4360CF9B630D /* Views */,
 				B02ABCE5A7B2B462CF828A87 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -125,13 +125,14 @@
 			isa = PBXGroup;
 			children = (
 				69CCD19F858D21E300342D69 /* NoFomoApp.swift */,
-				8BBC038E5C01741DD35B1DF8 /* Components */,
-				6403C4523768C59C4EB51BEF /* Models */,
+				A1613852153A8F2BEA1D0EA6 /* Components */,
+				F6A917A50BE11783D85A0ED4 /* Models */,
 				3E0DEC458A89903790A58825 /* Services */,
 				57C43AE873A42401672446D9 /* ViewModels */,
 				89F0F46AFF8B4360CF9B630D /* Views */,
 			);
-			path = NoFomo;
+			name = NoFomo;
+			path = .;
 			sourceTree = "<group>";
 		};
 		89F0F46AFF8B4360CF9B630D /* Views */ = {
@@ -147,12 +148,14 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
-		8BBC038E5C01741DD35B1DF8 /* Components */ = {
+		A1613852153A8F2BEA1D0EA6 /* Components */ = {
 			isa = PBXGroup;
 			children = (
-				0D5FEE8E00A65DB2FAA3B066 /* DesignSystem.swift */,
-				BD6955C1F0BE8694180E1A82 /* OpportunityCard.swift */,
-				4F26682E3F42008C5EBCDAB6 /* ScoreGauge.swift */,
+				1722F554E441792CED1F56F1 /* DesignSystem.swift */,
+				55C93C85747164B1527C470A /* OpportunityCard.swift */,
+				66320A7AE59F23AC239912E8 /* ScoreGauge.swift */,
+				D8DA353DA94D83D33C16FB39 /* TAChartView.swift */,
+				DBEFE20B18E1F74532754F1E /* TickerLogo.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -165,6 +168,15 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		F6A917A50BE11783D85A0ED4 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				94DE1395D92089EE94874B35 /* Opportunity.swift */,
+				BD917061A41426CD73547716 /* User.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -172,7 +184,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 062F0C5654E0FCF3CA20C7A7 /* Build configuration list for PBXNativeTarget "NoFomo" */;
 			buildPhases = (
-				D1F61A94A9DE8EA9B73CFF1C /* SwiftLint */,
 				2A41ECA04484FB37099BC341 /* Sources */,
 			);
 			buildRules = (
@@ -193,7 +204,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2600;
+				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 				};
 			};
@@ -216,49 +227,29 @@
 		};
 /* End PBXProject section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		D1F61A94A9DE8EA9B73CFF1C /* SwiftLint */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = SwiftLint;
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if which swiftlint > /dev/null; then\n  swiftlint\nfi\n";
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXSourcesBuildPhase section */
 		2A41ECA04484FB37099BC341 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				F0B150D84249BFD22E256E30 /* AuthService.swift in Sources */,
-				570740357A5928327E7A40DC /* DesignSystem.swift in Sources */,
+				66223C64FD0EE342D3F79820 /* DesignSystem.swift in Sources */,
 				8D9B2B0C0CCCC311677EBF89 /* DetailSheet.swift in Sources */,
 				EB11C0CF0ACFD31AC6C0FDEF /* FeedView.swift in Sources */,
 				936CAC2FA8A0B6D527282BA3 /* FeedViewModel.swift in Sources */,
 				25D9EA603F067040E6E29952 /* MainTabView.swift in Sources */,
 				7228F9C198A05954E6A79C9D /* NoFomoApp.swift in Sources */,
 				B80580986E58A2FB8FB06783 /* OnboardingView.swift in Sources */,
-				D6F8B7E68387097110186780 /* Opportunity.swift in Sources */,
-				4C253191746E1EF289F05CE2 /* OpportunityCard.swift in Sources */,
-				16C74EB25FA4AB7B1C3965A7 /* ScoreGauge.swift in Sources */,
+				08B8E5FF26B385BCC450365B /* Opportunity.swift in Sources */,
+				36BF10B820C4FECD791D70BF /* OpportunityCard.swift in Sources */,
+				4FE1E0C8845543EDF5A109D9 /* RadarService.swift in Sources */,
+				209769E803EB8D2481340748 /* ScoreGauge.swift in Sources */,
 				5BAC3A0513132943ADF9BB40 /* SettingsView.swift in Sources */,
 				DE71ECC1CEBB4BDAD5E35F3A /* SupabaseService.swift in Sources */,
-				D4C8CEE87BFB2BA12621CBA9 /* User.swift in Sources */,
+				E57E48901C94FFFD75ED0F53 /* TAChartView.swift in Sources */,
+				D84893E997C772D6CDC2F340 /* TickerLogo.swift in Sources */,
+				CD4FCFBCA9975D45397EC64C /* User.swift in Sources */,
 				EA04BB641451EDA6E1916D4B /* WatchlistView.swift in Sources */,
-				BBCCDDEEFF00112233445566 /* APIService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -302,7 +293,6 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -318,7 +308,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -360,7 +350,6 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -383,7 +372,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
@@ -393,22 +382,21 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_PREVIEWS = YES;
+				ENABLE_PREVIEWS = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "No Fomo";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_NSAppTransportSecurity = "{NSAllowsArbitraryLoads = true;}";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nofomo.app;
 				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -418,22 +406,21 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_PREVIEWS = YES;
+				ENABLE_PREVIEWS = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "No Fomo";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_NSAppTransportSecurity = "{NSAllowsArbitraryLoads = true;}";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nofomo.app;
 				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
