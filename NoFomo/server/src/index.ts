@@ -2,6 +2,9 @@ import 'dotenv/config'
 import express from 'express'
 import radarRouter from './routes/radar'
 import councilRouter from './routes/council'
+import discoverRouter from './routes/discover'
+import cronRouter from './routes/cron'
+import sweepRouter from './routes/sweep'
 
 const app = express()
 const PORT = parseInt(process.env.PORT || '3001', 10)
@@ -27,15 +30,24 @@ app.get('/health', (_req, res) => {
 
 // Routes
 app.use('/radar', radarRouter)
+app.use('/radar', discoverRouter)
+app.use('/radar', cronRouter)
+app.use('/radar', sweepRouter)
 app.use('/council', councilRouter)
 
-app.listen(PORT, () => {
-  console.log(`\n  NoFomo Radar Server`)
-  console.log(`  ────────────────────────────────────`)
-  console.log(`  http://localhost:${PORT}`)
-  console.log(`  /health  — status check`)
-  console.log(`  /radar   — POST { ticker } → research + council + persist`)
-  console.log(`  /council — POST { dossier } → 3-model verdict\n`)
-})
+// Only bind a port in local dev — on Vercel the app is exported as a serverless handler.
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`\n  NoFomo Radar Server`)
+    console.log(`  ────────────────────────────────────`)
+    console.log(`  http://localhost:${PORT}`)
+    console.log(`  /health         — status check`)
+    console.log(`  /radar          — POST { ticker } → research + council + persist`)
+    console.log(`  /radar/discover — POST → open-universe discovery pipeline`)
+    console.log(`  /radar/cron     — GET/POST → daily discover → radar → persist → sweep`)
+    console.log(`  /radar/sweep    — POST → prune closed/stale opportunities`)
+    console.log(`  /council        — POST { dossier } → 3-model verdict\n`)
+  })
+}
 
 export default app

@@ -11,6 +11,7 @@ import { getSupabaseAdmin } from '../lib/supabase'
 import { extractJsonBlock, buildRadarRow } from '../lib/opportunity'
 import { selectMode } from '../agents/tiers'
 import { runCouncil } from './council'
+import type { CouncilVerdict, CIOArbiter } from '../agents/types'
 import { computeSignals } from '../lib/signals'
 import { tagThemes } from '../lib/themes'
 import { getPeerPositioning } from '../lib/peers'
@@ -228,10 +229,18 @@ router.post('/', async (req: Request, res: Response) => {
 
     // Auto-select council mode based on signal strength
     const modeConfig = selectMode(undefined, { score: structured.score, tier: structured.tier, tripleSignal: structured.tripleSignal })
-    let councilResult: Awaited<ReturnType<typeof runCouncil>> | null = null
+    // council.ts exposes runCouncil(dossier) → { gemini, deepseek, cio }. Map it onto the
+    // bull/bear/neutral/summary shape the rest of this route + buildRadarRow expect.
+    let councilResult: { bull: CouncilVerdict; bear: CouncilVerdict; neutral: CIOArbiter; summary: string } | null = null
     if (!skipCouncil) {
       try {
-        councilResult = await runCouncil(finalText, modeConfig.mode, enrichment ?? undefined)
+        const raw = await runCouncil(finalText)
+        councilResult = {
+          bull: raw.gemini,
+          bear: raw.deepseek,
+          neutral: raw.cio,
+          summary: raw.cio.synthesis,
+        }
         console.log(`[radar] Council: mode=${modeConfig.mode} bull=${councilResult.bull.verdict} bear=${councilResult.bear.verdict} neutral=${councilResult.neutral.verdict} score=${councilResult.neutral.score}`)
       } catch (e) {
         console.error('[radar] Council failed:', e instanceof Error ? e.message : e)

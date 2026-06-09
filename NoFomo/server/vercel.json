@@ -15,6 +15,11 @@
   "env": {
     "NODE_ENV": "production"
   },
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 300
+    }
+  },
   "crons": [
     {
       "path": "/radar/cron?secret=nofomo-cron-dev",
