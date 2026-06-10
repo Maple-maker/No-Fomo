@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Core opportunity model (maps to opportunity_feed Supabase table)
+// MARK: - Core opportunity model (maps to radar_opportunities Supabase table)
 // Updated to match No Fomo design prototype data schema
 
 struct Opportunity: Identifiable, Codable {

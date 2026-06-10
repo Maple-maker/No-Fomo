@@ -9,8 +9,8 @@ final class AuthService: ObservableObject {
     @Published var isAuthenticated = false
     @Published var currentToken: String?
 
-    private let supabaseURL = "https://lmgphebvungyqsnqitcg.supabase.co"
-    private let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtZ3BoZWJ2dW5neXFzbnFpdGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NjMwNzQsImV4cCI6MjA5NTAzOTA3NH0.yc9oLd6qBDuy-DCVuv0TjUFCeaowGZTrsiXLeqEnwqk"
+    private let supabaseURL = "https://jmtkygwvmrolfvwueggs.supabase.co"
+    private let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImptdGt5Z3d2bXJvbGZ2d3VlZ2dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMzAxODUsImV4cCI6MjA5NTkwNjE4NX0.JUbsLc_KHHdfXWDSAl9Rf00Da-axpSj4Nw4DvXGNBvk"
 
     private init() {
         loadStoredSession()

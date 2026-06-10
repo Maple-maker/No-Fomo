@@ -50,31 +50,63 @@ struct FeedView: View {
 
                         // Loading state
                         if vm.isLoading && vm.opportunities.isEmpty {
-                            VStack(spacing: 20) {
-                                ProgressView()
-                                    .tint(DS.Color.accent)
-                                Text("Loading radar feed...")
+                            VStack(spacing: 16) {
+                                // Skeleton rows — shimmer placeholder
+                                ForEach(0..<4, id: \.self) { _ in
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(DS.Color.elevated)
+                                        .frame(height: 88)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(
+                                                    LinearGradient(
+                                                        colors: [Color.white.opacity(0), Color.white.opacity(0.04), Color.white.opacity(0)],
+                                                        startPoint: .leading, endPoint: .trailing
+                                                    )
+                                                )
+                                        )
+                                }
+                                Text("Scanning the market...")
                                     .font(.system(size: 13))
                                     .foregroundColor(DS.Color.textMuted)
                             }
-                            .frame(height: 200)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 12)
                         }
 
                         // Error banner
                         if let error = vm.errorMessage {
-                            HStack(spacing: 8) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.orange)
-                                Text(error)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.orange)
-                                    .lineLimit(3)
-                                Spacer()
-                                Button(action: { vm.errorMessage = nil }) {
-                                    Image(systemName: "xmark")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundColor(.orange.opacity(0.7))
+                            VStack(spacing: 10) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.orange)
+                                    Text(error)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.orange)
+                                        .lineLimit(3)
+                                    Spacer()
+                                    Button(action: { vm.errorMessage = nil }) {
+                                        Image(systemName: "xmark")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundColor(.orange.opacity(0.7))
+                                    }
+                                }
+                                // Retry button
+                                Button(action: {
+                                    Task { await vm.loadFeed(isPremium: isPro) }
+                                }) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "arrow.clockwise")
+                                            .font(.system(size: 11))
+                                        Text("Retry")
+                                            .font(.system(size: 12, weight: .semibold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .frame(height: 32)
+                                    .background(DS.Color.accent)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
                                 }
                             }
                             .padding(10)
@@ -86,6 +118,40 @@ struct FeedView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                             .padding(.horizontal, 16)
                             .padding(.top, 8)
+                        }
+
+                        // Empty state
+                        if !vm.isLoading && vm.errorMessage == nil && vm.opportunities.isEmpty {
+                            VStack(spacing: 16) {
+                                Spacer().frame(height: 40)
+                                Image(systemName: "antenna.radiowaves.left.and.right")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(DS.Color.textMuted.opacity(0.4))
+                                Text("No opportunities found")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(DS.Color.textMuted)
+                                Text("Check back soon — the radar scans daily at 15:00 UTC.")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(DS.Color.textMuted.opacity(0.7))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 40)
+                                Button(action: {
+                                    Task { await vm.loadFeed(isPremium: isPro) }
+                                }) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "arrow.clockwise")
+                                            .font(.system(size: 11))
+                                        Text("Refresh")
+                                            .font(.system(size: 13, weight: .semibold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 20)
+                                    .frame(height: 36)
+                                    .background(DS.Color.accent)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
                         }
 
                         // Cards

@@ -34,7 +34,7 @@
         "npx",
         "-y",
         "@supabase/mcp-server-supabase",
-        "--project-ref=lmgphebvungyqsnqitcg"
+        "--project-ref=jmtkygwvmrolfvwueggs"
       ],
       "enabled": false,
       "environment": {

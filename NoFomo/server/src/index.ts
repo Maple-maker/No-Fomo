@@ -9,6 +9,7 @@ import kalshiRouter from './routes/kalshi'
 import screenRouter from './routes/screen'
 import filingsRouter from './routes/filings'
 import supplyChainRouter from './routes/supply-chain'
+import budgetCouncilRouter from './routes/budgetCouncil'
 
 const app = express()
 const PORT = parseInt(process.env.PORT || '3001', 10)
@@ -42,6 +43,7 @@ app.use('/radar', screenRouter)
 app.use('/radar', filingsRouter)
 app.use('/radar', supplyChainRouter)
 app.use('/council', councilRouter)
+app.use('/council', budgetCouncilRouter)
 
 // Only bind a port in local dev — on Vercel the app is exported as a serverless handler.
 if (!process.env.VERCEL) {
@@ -54,7 +56,8 @@ if (!process.env.VERCEL) {
     console.log(`  /radar/discover — POST → open-universe discovery pipeline`)
     console.log(`  /radar/cron     — GET/POST → daily discover → radar → persist → sweep`)
     console.log(`  /radar/sweep    — POST → prune closed/stale opportunities`)
-    console.log(`  /council        — POST { dossier } → 3-model verdict\n`)
+    console.log(`  /council        — POST { dossier } → 3-model verdict`)
+  console.log(`  /council/budget — POST { ticker, dossier } → cheap pre-filter debate\n`)
   })
 }
 
