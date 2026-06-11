@@ -131,10 +131,10 @@ function scoreFundamental(e: Partial<TickerEnrichment>): { score: number; signal
       count++
     }
 
-    // Analyst count — NOW FLIPPED: low coverage = discount/mystery = higher score
-    if (a.count === 0) total += 95
-    else if (a.count <= 2) total += 80
-    else if (a.count <= 5) total += 60
+    // Analyst count — slightly reward low coverage (contrarian dimension handles the heavy boost)
+    if (a.count === 0) total += 50
+    else if (a.count <= 2) total += 45
+    else if (a.count <= 5) total += 55
     else if (a.count <= 10) total += 50
     else total += 40
     count++
@@ -300,6 +300,22 @@ function scoreFundamental(e: Partial<TickerEnrichment>): { score: number; signal
     count++
   }
 
+  // DCF intrinsic value check
+  if (e.dcfValuation) {
+    const d = e.dcfValuation
+    if (d.verdict === 'undervalued') {
+      total += 85
+      signals.push(`DCF: undervalued ${d.upsidePct > 0 ? '+' : ''}${Math.round(d.upsidePct)}% to intrinsic ($${d.intrinsicPerShare.toFixed(2)})`)
+    } else if (d.verdict === 'fairly_valued') {
+      total += 55
+      signals.push(`DCF: fairly valued (intrinsic $${d.intrinsicPerShare.toFixed(2)})`)
+    } else {
+      total += 20
+      signals.push(`DCF: overvalued ${Math.round(d.upsidePct)}% above intrinsic`)
+    }
+    count++
+  }
+
   const score = count > 0 ? Math.round(total / count) : 50
   return { score, signals }
 }
@@ -402,20 +418,20 @@ function scoreContrarian(
     }
     count++
   } else if (e.analyst && e.analyst.count <= 2) {
-    // No council data but extremely underfollowed = mystery discount
-    total += 80
-    signals.push(`Mystery stock: ${e.analyst.count} analyst(s), unknown to consensus`)
+    // No council data, underfollowed — neutral until fundamentals confirm
+    total += 50
+    signals.push(`Underfollowed (${e.analyst.count} analyst(s)) — unverified`)
     count++
   }
 
-  // Underfollowed + volume signal (BOOSTED)
+  // Underfollowed + volume signal — require both to score highly
   if (e.analyst && e.indicators?.volume) {
     if (e.analyst.count <= 1 && e.indicators.volume.ratio > 1.2) {
-      total += 95  // BOOSTED: discovery by smart money
-      signals.push(`💎 Smart money discovery: ${e.analyst.count} analyst + ${e.indicators.volume.ratio.toFixed(1)}x volume`)
+      total += 75  // discovery signal, not automatic Tier 1
+      signals.push(`💎 Low coverage + ${e.indicators.volume.ratio.toFixed(1)}x volume — potential discovery`)
     } else if (e.analyst.count === 0) {
-      total += 90  // BOOSTED from 85: zero coverage = maximum mystery discount
-      signals.push(`🚀 Ghost stock: zero analyst coverage`)
+      total += 55  // zero coverage alone is not a signal
+      signals.push(`Zero analyst coverage`)
     } else if (e.analyst.count <= 2 && e.indicators.volume.ratio > 1.5) {
       total += 85
       signals.push(`Underfollowed + unusual volume accumulation`)
@@ -588,6 +604,26 @@ function scoreContrarian(
       total += 48
     }
     count++
+  }
+
+  // Implied growth divergence: price assumes X% but company is growing at Y%
+  if (e.dcfValuation?.impliedGrowth != null && e.revAcceleration != null) {
+    const implied = e.dcfValuation.impliedGrowth * 100
+    const actual = e.revAcceleration
+    const divergence = actual - implied
+    if (divergence > 15) {
+      total += 90
+      signals.push(`🎯 Priced for ${implied.toFixed(1)}% growth, delivering ${actual.toFixed(1)}% — major discount`)
+      count++
+    } else if (divergence > 8) {
+      total += 70
+      signals.push(`Growing faster (${actual.toFixed(1)}%) than market expects (${implied.toFixed(1)}%)`)
+      count++
+    } else if (divergence < -15) {
+      total += 20
+      signals.push(`⚠️ Priced for ${implied.toFixed(1)}% growth but only delivering ${actual.toFixed(1)}%`)
+      count++
+    }
   }
 
   const score = count > 0 ? Math.round(total / count) : 50

@@ -161,6 +161,17 @@ struct FeedView: View {
                                     opportunity: opp,
                                     onOpen: { detailOpp = opp },
                                     onUnlock: { isPro = true },
+                                    onBookmark: { bookmarked in
+                                        Task {
+                                            if let userId = auth.currentUser?.id {
+                                                try? await SupabaseService.shared.addToWatchlist(
+                                                    userId: userId,
+                                                    opportunityId: bookmarked.id,
+                                                    ticker: bookmarked.ticker
+                                                )
+                                            }
+                                        }
+                                    },
                                     density: .regular,
                                     gaugeStyle: .ring,
                                     isLocked: !isPro

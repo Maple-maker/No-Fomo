@@ -25,8 +25,7 @@ final class FeedViewModel: ObservableObject {
             opportunities = results
             hasMore = results.count == pageSize
         } catch {
-            print("[feed] Supabase error: \(error.localizedDescription)")
-            // Don't seed mocks — show empty state instead
+            errorMessage = "Feed error: \(error.localizedDescription)"
             opportunities = []
             hasMore = false
         }

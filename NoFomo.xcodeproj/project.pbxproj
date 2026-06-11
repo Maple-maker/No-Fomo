@@ -9,20 +9,26 @@
 /* Begin PBXBuildFile section */
 		01E2947B250CEE3DF9918EAF /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ED9FBBB986D69FDEC0921F7 /* AuthService.swift */; };
 		08B8E5FF26B385BCC450365B /* Opportunity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94DE1395D92089EE94874B35 /* Opportunity.swift */; };
+		0D125091377B57A69D0348F5 /* CustomThesis.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82DD381FAAF54564818B74FD /* CustomThesis.swift */; };
 		112ED94D75861053978F3703 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3162963DFACE050469115305 /* OnboardingView.swift */; };
 		154F47ED441D7FF9FD3FD1D3 /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EBCD50451AC8F550D98A85A /* FeedViewModel.swift */; };
 		174B9EC2C7EA985510875F4C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F1E2F1ED44755ACE830E3BA /* SettingsView.swift */; };
 		209769E803EB8D2481340748 /* ScoreGauge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66320A7AE59F23AC239912E8 /* ScoreGauge.swift */; };
+		2A86930BF3D81FEB62E363DB /* RadarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B687FBD957CD3B144C788B /* RadarView.swift */; };
 		331A3661E13A28EE1EE39085 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68DFBC48ECD19B3B50B4BC40 /* APIService.swift */; };
 		347852B48074520EB5ABAF9B /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8E53A699D1CFE92FB87A1C6 /* MainTabView.swift */; };
 		36BF10B820C4FECD791D70BF /* OpportunityCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55C93C85747164B1527C470A /* OpportunityCard.swift */; };
 		66223C64FD0EE342D3F79820 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1722F554E441792CED1F56F1 /* DesignSystem.swift */; };
 		7228F9C198A05954E6A79C9D /* NoFomoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69CCD19F858D21E300342D69 /* NoFomoApp.swift */; };
+		9C4C96293DCBDA2F71F2D9A6 /* RadarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE1F5975972DE3774F89828 /* RadarViewModel.swift */; };
 		B53375707CB46FB24120A72B /* WatchlistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9FFA93E4D0ECA788E8CFD9C /* WatchlistView.swift */; };
 		B7EAD6C1E4E49A167DA9DDC8 /* DetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62374B6D7F123A32D9561EE5 /* DetailSheet.swift */; };
+		C8BFBDBCE807AAF2ABE7BCFF /* ThesisDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE25C8A33F5F7DF4907B9FC7 /* ThesisDetailView.swift */; };
 		CA28AD02CA00B5F754C84A62 /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0918E42D50C4EE4301F69F4D /* SupabaseService.swift */; };
 		CD4FCFBCA9975D45397EC64C /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD917061A41426CD73547716 /* User.swift */; };
+		D0536F4009E8F04CE5663499 /* ThesisEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8020286A021A2566786F4B7F /* ThesisEditorView.swift */; };
 		D84893E997C772D6CDC2F340 /* TickerLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBEFE20B18E1F74532754F1E /* TickerLogo.swift */; };
+		DD7939896B2F5CDE95E0536D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4053B8DB966DA988D537FF58 /* Assets.xcassets */; };
 		F63D1978D4E942129E0F806C /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63E3EF6A5E780366C1D65A1F /* FeedView.swift */; };
 /* End PBXBuildFile section */
 
@@ -33,15 +39,21 @@
 		1722F554E441792CED1F56F1 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		2EBCD50451AC8F550D98A85A /* FeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedViewModel.swift; sourceTree = "<group>"; };
 		3162963DFACE050469115305 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		4053B8DB966DA988D537FF58 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		55C93C85747164B1527C470A /* OpportunityCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpportunityCard.swift; sourceTree = "<group>"; };
 		62374B6D7F123A32D9561EE5 /* DetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailSheet.swift; sourceTree = "<group>"; };
 		63E3EF6A5E780366C1D65A1F /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		66320A7AE59F23AC239912E8 /* ScoreGauge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreGauge.swift; sourceTree = "<group>"; };
 		68DFBC48ECD19B3B50B4BC40 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		69CCD19F858D21E300342D69 /* NoFomoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoFomoApp.swift; sourceTree = "<group>"; };
+		8020286A021A2566786F4B7F /* ThesisEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThesisEditorView.swift; sourceTree = "<group>"; };
+		82DD381FAAF54564818B74FD /* CustomThesis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomThesis.swift; sourceTree = "<group>"; };
 		91B25AAA5555B7B58BD36DF9 /* NoFomo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NoFomo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		94DE1395D92089EE94874B35 /* Opportunity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Opportunity.swift; sourceTree = "<group>"; };
 		A9FFA93E4D0ECA788E8CFD9C /* WatchlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistView.swift; sourceTree = "<group>"; };
+		ABE1F5975972DE3774F89828 /* RadarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarViewModel.swift; sourceTree = "<group>"; };
+		AE25C8A33F5F7DF4907B9FC7 /* ThesisDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThesisDetailView.swift; sourceTree = "<group>"; };
+		B4B687FBD957CD3B144C788B /* RadarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarView.swift; sourceTree = "<group>"; };
 		BD917061A41426CD73547716 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		DBEFE20B18E1F74532754F1E /* TickerLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TickerLogo.swift; sourceTree = "<group>"; };
 		E8E53A699D1CFE92FB87A1C6 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
@@ -54,6 +66,16 @@
 				63E3EF6A5E780366C1D65A1F /* FeedView.swift */,
 			);
 			path = Feed;
+			sourceTree = "<group>";
+		};
+		248AF467D2038CCB11B5120F /* Radar */ = {
+			isa = PBXGroup;
+			children = (
+				B4B687FBD957CD3B144C788B /* RadarView.swift */,
+				AE25C8A33F5F7DF4907B9FC7 /* ThesisDetailView.swift */,
+				8020286A021A2566786F4B7F /* ThesisEditorView.swift */,
+			);
+			path = Radar;
 			sourceTree = "<group>";
 		};
 		24B06F3FAB7322FB40C017C9 /* Settings */ = {
@@ -71,6 +93,7 @@
 				4560B36D283C8E0DFF2802B5 /* Detail */,
 				0CC5A2E1AD4C1E89654271F0 /* Feed */,
 				7338026D5689B8A8DF07AB87 /* Onboarding */,
+				248AF467D2038CCB11B5120F /* Radar */,
 				24B06F3FAB7322FB40C017C9 /* Settings */,
 				ED97D0023A1F398DB6DEAC88 /* Watchlist */,
 			);
@@ -103,6 +126,7 @@
 			isa = PBXGroup;
 			children = (
 				2EBCD50451AC8F550D98A85A /* FeedViewModel.swift */,
+				ABE1F5975972DE3774F89828 /* RadarViewModel.swift */,
 			);
 			name = ViewModels;
 			path = NoFomo/ViewModels;
@@ -111,6 +135,7 @@
 		71F7108628AA088007EA2249 /* NoFomo */ = {
 			isa = PBXGroup;
 			children = (
+				4053B8DB966DA988D537FF58 /* Assets.xcassets */,
 				69CCD19F858D21E300342D69 /* NoFomoApp.swift */,
 			);
 			path = NoFomo;
@@ -166,6 +191,7 @@
 		F6A917A50BE11783D85A0ED4 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				82DD381FAAF54564818B74FD /* CustomThesis.swift */,
 				94DE1395D92089EE94874B35 /* Opportunity.swift */,
 				BD917061A41426CD73547716 /* User.swift */,
 			);
@@ -182,6 +208,7 @@
 			buildPhases = (
 				D1F61A94A9DE8EA9B73CFF1C /* SwiftLint */,
 				2A41ECA04484FB37099BC341 /* Sources */,
+				E198861FAF64D46C004F4B2C /* Resources */,
 			);
 			buildRules = (
 			);
@@ -203,6 +230,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
+					DF00B6380CE40AAD965683FB = {
+						DevelopmentTeam = XYALA22765;
+						ProvisioningStyle = Automatic;
+					};
 				};
 			};
 			buildConfigurationList = CEA6F5A7F13E293BBBEA1E4B /* Build configuration list for PBXProject "NoFomo" */;
@@ -223,6 +254,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E198861FAF64D46C004F4B2C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DD7939896B2F5CDE95E0536D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		D1F61A94A9DE8EA9B73CFF1C /* SwiftLint */ = {
@@ -253,6 +295,7 @@
 			files = (
 				331A3661E13A28EE1EE39085 /* APIService.swift in Sources */,
 				01E2947B250CEE3DF9918EAF /* AuthService.swift in Sources */,
+				0D125091377B57A69D0348F5 /* CustomThesis.swift in Sources */,
 				66223C64FD0EE342D3F79820 /* DesignSystem.swift in Sources */,
 				B7EAD6C1E4E49A167DA9DDC8 /* DetailSheet.swift in Sources */,
 				F63D1978D4E942129E0F806C /* FeedView.swift in Sources */,
@@ -262,9 +305,13 @@
 				112ED94D75861053978F3703 /* OnboardingView.swift in Sources */,
 				08B8E5FF26B385BCC450365B /* Opportunity.swift in Sources */,
 				36BF10B820C4FECD791D70BF /* OpportunityCard.swift in Sources */,
+				2A86930BF3D81FEB62E363DB /* RadarView.swift in Sources */,
+				9C4C96293DCBDA2F71F2D9A6 /* RadarViewModel.swift in Sources */,
 				209769E803EB8D2481340748 /* ScoreGauge.swift in Sources */,
 				174B9EC2C7EA985510875F4C /* SettingsView.swift in Sources */,
 				CA28AD02CA00B5F754C84A62 /* SupabaseService.swift in Sources */,
+				C8BFBDBCE807AAF2ABE7BCFF /* ThesisDetailView.swift in Sources */,
+				D0536F4009E8F04CE5663499 /* ThesisEditorView.swift in Sources */,
 				D84893E997C772D6CDC2F340 /* TickerLogo.swift in Sources */,
 				CD4FCFBCA9975D45397EC64C /* User.swift in Sources */,
 				B53375707CB46FB24120A72B /* WatchlistView.swift in Sources */,
@@ -401,8 +448,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = NoFomo/NoFomo.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XYALA22765;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -415,7 +465,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nofomo.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nofomodev.app;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -425,8 +475,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = NoFomo/NoFomo.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XYALA22765;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -439,7 +492,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nofomo.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nofomodev.app;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

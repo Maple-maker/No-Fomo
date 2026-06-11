@@ -138,6 +138,11 @@ struct Opportunity: Identifiable, Codable {
     var insiderSignal: String = ""
     var insiderTransactions: [[String]] = []
 
+    // ── Confidence scoring ──
+    var confidenceScore: Int?
+    var confidenceLabel: String?
+    var dataFreshness: String?
+
     // MARK: Memberwise init (for mock data)
     init(id: String, ticker: String, companyName: String, sector: String = "", tier: Int,
          score: Double = 0, tripleSignal: Bool = false, bluf: String,
@@ -328,6 +333,10 @@ struct Opportunity: Identifiable, Codable {
         insiderNetSentiment = try c.decodeIfPresent(String.self, forKey: .insiderNetSentiment) ?? ""
         insiderSignal = try c.decodeIfPresent(String.self, forKey: .insiderSignal) ?? ""
         insiderTransactions = try c.decodeIfPresent([[String]].self, forKey: .insiderTransactions) ?? []
+        // ── Confidence scoring ──
+        confidenceScore = try c.decodeIfPresent(Int.self, forKey: .confidenceScore)
+        confidenceLabel = try c.decodeIfPresent(String.self, forKey: .confidenceLabel)
+        dataFreshness = try c.decodeIfPresent(String.self, forKey: .dataFreshness)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -431,6 +440,9 @@ struct Opportunity: Identifiable, Codable {
         case insiderNetSentiment = "insider_net_sentiment"
         case insiderSignal = "insider_signal"
         case insiderTransactions = "insider_transactions"
+        case confidenceScore = "confidence_score"
+        case confidenceLabel = "confidence_label"
+        case dataFreshness = "data_freshness"
     }
 }
 

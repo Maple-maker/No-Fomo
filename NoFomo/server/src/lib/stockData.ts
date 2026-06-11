@@ -47,6 +47,8 @@ interface YfQuoteModules {
     grossMargins?: { raw: number }
     priceToSalesTrailing12Months?: { raw: number }
     freeCashflow?: { raw: number }
+    totalCash?: { raw: number }
+    totalDebt?: { raw: number }
     enterpriseToEbitda?: { raw: number }
     earningsPerShare?: { raw: number }
     forwardEps?: { raw: number }
@@ -245,6 +247,10 @@ export interface StockDataResult {
     sell: number
     strongSell: number
   }>
+  // DCF valuation inputs
+  fcf?: number | null
+  cash_and_equiv?: number | null
+  debt_total?: number | null
   error?: string
 }
 
@@ -430,5 +436,8 @@ export async function getStockData(ticker: string): Promise<StockDataResult> {
     payout_ratio: detail?.payoutRatio?.raw ?? null,
     last_dividend_value: stats?.lastDividendValue?.raw ?? null,
     recommendation_trend: recommendationTrend,
+    fcf: fin?.freeCashflow?.raw ?? null,
+    cash_and_equiv: fin?.totalCash?.raw ?? null,
+    debt_total: fin?.totalDebt?.raw ?? null,
   }
 }

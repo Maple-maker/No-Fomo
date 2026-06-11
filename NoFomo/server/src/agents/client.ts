@@ -34,11 +34,11 @@ function getRouterClient(): OpenAI {
   return getOpenRouterClient()
 }
 
-/** Free models on AnyAPI free tier (100K daily tokens) */
+/** Free models on AnyAPI/OpenRouter free tier — intentionally different architectures per role */
 const ANYAPI_FREE_MODELS = {
-  deepseek: 'qwen/qwen3-next-80b-a3b-instruct',
-  gemini: 'qwen/qwen3-next-80b-a3b-instruct',
-  claude: 'qwen/qwen3-next-80b-a3b-instruct',
+  deepseek: 'deepseek/deepseek-chat-v3-0324',
+  gemini: 'meta-llama/llama-4-maverick',
+  claude: 'qwen/qwen3-235b-a22b-instruct',
 } as const
 
 // ── DeepSeek — primary research agent ──────────────────────────
@@ -60,19 +60,19 @@ export function getDeepSeekClient(): OpenAI {
 export function getDeepSeekModel(): string {
   if (process.env.DEEPSEEK_API_KEY) return process.env.DEEPSEEK_MODEL || 'deepseek-chat'
   if (process.env.ANYAPI_API_KEY) return ANYAPI_FREE_MODELS.deepseek
-  return process.env.DEEPSEEK_MODEL || 'deepseek/deepseek-chat'
+  return process.env.DEEPSEEK_MODEL || 'deepseek/deepseek-chat-v3-0324:free'
 }
 
 export function getGeminiModel(): string {
   if (process.env.GEMINI_API_KEY) return process.env.GEMINI_MODEL || 'gemini-2.5-pro'
   if (process.env.ANYAPI_API_KEY) return ANYAPI_FREE_MODELS.gemini
-  return process.env.GEMINI_MODEL || 'google/gemini-2.5-pro-preview-03-25'
+  return process.env.GEMINI_MODEL || 'meta-llama/llama-3.3-70b-instruct:free'
 }
 
 export function getClaudeModel(): string {
   if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250901'
   if (process.env.ANYAPI_API_KEY) return ANYAPI_FREE_MODELS.claude
-  return process.env.ANTHROPIC_MODEL || 'anthropic/claude-sonnet-4-5'
+  return process.env.ANTHROPIC_MODEL || 'qwen/qwen3-235b-a22b-instruct:free'
 }
 
 // ── Anthropic Claude — CIO arbiter ─────────────────────────────

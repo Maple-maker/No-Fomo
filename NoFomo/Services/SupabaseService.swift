@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 // MARK: - Supabase Configuration
 
@@ -35,9 +36,18 @@ final class SupabaseService {
         let (data, response) = try await session.data(for: req)
         try validate(response: response, data: data)
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let rows = try decoder.decode([RadarRow].self, from: data)
-        return rows.map { $0.toOpportunity() }
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        do {
+            let rows = try decoder.decode([RadarRow].self, from: data)
+            return rows.map { $0.toOpportunity() }
+        } catch {
+            // One malformed row crashed the array — decode per-row and skip bad ones
+            guard let rawArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return [] }
+            return rawArray.compactMap { dict -> Opportunity? in
+                guard let rowData = try? JSONSerialization.data(withJSONObject: dict) else { return nil }
+                return (try? decoder.decode(RadarRow.self, from: rowData))?.toOpportunity()
+            }
+        }
     }
 
     func fetchOpportunity(id: Int) async throws -> Opportunity {
@@ -106,6 +116,58 @@ final class SupabaseService {
             "apns_token": token,
         ])
         _ = try await session.data(for: req)
+    }
+
+    // MARK: - Custom Theses (user_theses table)
+
+    func fetchTheses(userId: String) async throws -> [CustomThesis] {
+        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/user_theses"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [
+            URLQueryItem(name: "select", value: "*"),
+            URLQueryItem(name: "user_id", value: "eq.\(userId)"),
+            URLQueryItem(name: "order", value: "created_at.desc"),
+        ]
+        var req = URLRequest(url: components.url!)
+        req.addCommonHeaders()
+        let (data, response) = try await session.data(for: req)
+        try validate(response: response, data: data)
+        return try JSONDecoder().decode([CustomThesis].self, from: data)
+    }
+
+    func createThesis(_ thesis: CustomThesis) async throws -> CustomThesis {
+        var req = URLRequest(url: baseURL.appendingPathComponent("/rest/v1/user_theses"))
+        req.httpMethod = "POST"
+        req.addCommonHeaders()
+        req.setValue("return=representation", forHTTPHeaderField: "Prefer")
+        req.httpBody = try JSONEncoder().encode(ThesisWritePayload(thesis))
+        let (data, response) = try await session.data(for: req)
+        try validate(response: response, data: data)
+        guard let saved = try JSONDecoder().decode([CustomThesis].self, from: data).first else {
+            throw AppError.notFound
+        }
+        return saved
+    }
+
+    func updateThesis(_ thesis: CustomThesis) async throws {
+        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/user_theses"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "id", value: "eq.\(thesis.id)")]
+        var req = URLRequest(url: components.url!)
+        req.httpMethod = "PATCH"
+        req.addCommonHeaders()
+        req.setValue("return=minimal", forHTTPHeaderField: "Prefer")
+        req.httpBody = try JSONEncoder().encode(ThesisWritePayload(thesis))
+        let (_, response) = try await session.data(for: req)
+        try validate(response: response, data: nil)
+    }
+
+    func deleteThesis(id: Int) async throws {
+        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/user_theses"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "id", value: "eq.\(id)")]
+        var req = URLRequest(url: components.url!)
+        req.httpMethod = "DELETE"
+        req.addCommonHeaders()
+        let (_, response) = try await session.data(for: req)
+        try validate(response: response, data: nil)
     }
 }
 
@@ -191,13 +253,6 @@ struct RadarRow: Codable {
         let aggressive: Double?
         let base: Double?
         let conservative: Double?
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case id, ticker, tier, thesis
-        case overallScore = "overall_score"
-        case geminiAnalysis = "gemini_analysis"
-        case dataSnapshot = "data_snapshot"
     }
 
     func toOpportunity() -> Opportunity {
@@ -395,13 +450,26 @@ private extension URLRequest {
         setValue("application/json", forHTTPHeaderField: "Content-Type")
         setValue("application/json", forHTTPHeaderField: "Accept")
         setValue(SUPABASE_ANON_KEY, forHTTPHeaderField: "apikey")
-        // Read token from UserDefaults directly (nonisolated, avoids MainActor hop)
-        if let token = UserDefaults.standard.string(forKey: "auth_token") {
-            setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        } else {
-            setValue("Bearer \(SUPABASE_ANON_KEY)", forHTTPHeaderField: "Authorization")
-        }
+        // Read from Keychain (auth moved from UserDefaults in prior migration)
+        let bearer = keychainLoad(key: "auth_token") ?? SUPABASE_ANON_KEY
+        // Never forward anonymous or server-internal tokens to Supabase
+        let safeBearer = (bearer == "anon") ? SUPABASE_ANON_KEY : bearer
+        setValue("Bearer \(safeBearer)", forHTTPHeaderField: "Authorization")
     }
+}
+
+private func keychainLoad(key: String) -> String? {
+    let query: [String: Any] = [
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrService as String: "com.nofomo.app",
+        kSecAttrAccount as String: key,
+        kSecReturnData as String: true,
+        kSecMatchLimit as String: kSecMatchLimitOne,
+    ]
+    var result: AnyObject?
+    guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+          let data = result as? Data else { return nil }
+    return String(data: data, encoding: .utf8)
 }
 
 private func validate(response: URLResponse, data: Data?) throws {
