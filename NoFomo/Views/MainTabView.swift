@@ -6,6 +6,7 @@ struct MainTabView: View {
     private let tabs: [(id: String, label: String, icon: String)] = [
         ("feed", "Feed", "antenna.radiowaves.left.and.right"),
         ("watch", "Watchlist", "bookmark"),
+        ("radar", "Radar", "scope"),
         ("settings", "Account", "person"),
     ]
 
@@ -16,6 +17,8 @@ struct MainTabView: View {
                     .tag("feed")
                 WatchlistView()
                     .tag("watch")
+                RadarView()
+                    .tag("radar")
                 SettingsView()
                     .tag("settings")
             }

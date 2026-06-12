@@ -1,18 +1,23 @@
 import SwiftUI
 
 struct WatchlistView: View {
-    @State private var savedIDs: Set<String> = ["crvo", "mrdn"]
+    @EnvironmentObject var auth: AuthService
+    @State private var items: [Opportunity] = []
+    @State private var isLoading = false
     @State private var detailOpp: Opportunity? = nil
-
-    private var items: [Opportunity] {
-        []  // Real watchlist will sync from Supabase later
-    }
 
     var body: some View {
         ZStack {
             DS.Color.background.ignoresSafeArea()
 
-            if items.isEmpty {
+            if isLoading {
+                VStack(spacing: 0) {
+                    WatchlistHeader(count: 0)
+                    Spacer()
+                    ProgressView().tint(DS.Color.textMuted)
+                    Spacer()
+                }
+            } else if items.isEmpty {
                 emptyContent
             } else {
                 VStack(spacing: 0) {
@@ -23,8 +28,8 @@ struct WatchlistView: View {
                             ForEach(items) { opp in
                                 WatchlistRow(
                                     opportunity: opp,
-                                    isSaved: savedIDs.contains(opp.id),
-                                    onToggleSave: { toggleSave(opp.id) }
+                                    isSaved: true,
+                                    onToggleSave: { removeItem(opp) }
                                 )
                                 .onTapGesture { detailOpp = opp }
                                 .padding(.horizontal, 16)
@@ -38,6 +43,9 @@ struct WatchlistView: View {
         }
         .sheet(item: $detailOpp) { opp in
             DetailSheet(opportunity: opp, isPro: true)
+        }
+        .task {
+            await loadWatchlist()
         }
     }
 
@@ -64,11 +72,18 @@ struct WatchlistView: View {
         }
     }
 
-    private func toggleSave(_ id: String) {
-        if savedIDs.contains(id) {
-            savedIDs.remove(id)
-        } else {
-            savedIDs.insert(id)
+    private func loadWatchlist() async {
+        guard let userId = auth.currentUser?.id else { return }
+        isLoading = true
+        items = (try? await SupabaseService.shared.fetchWatchlist(userId: userId)) ?? []
+        isLoading = false
+    }
+
+    private func removeItem(_ opp: Opportunity) {
+        Task {
+            guard let userId = auth.currentUser?.id else { return }
+            try? await SupabaseService.shared.removeFromWatchlist(userId: userId, ticker: opp.ticker)
+            items.removeAll { $0.id == opp.id }
         }
     }
 }

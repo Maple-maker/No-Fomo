@@ -4,13 +4,16 @@ import type { CouncilVerdict, CIOArbiter } from '../agents/types'
 
 const router = Router()
 
-const COUNCIL_PROMPT = `You are an independent equity analyst on the NoFomo AI Council. Your job: read a radar research dossier and deliver a verdict.
-
+const COUNCIL_RULES = `
 ## Rules
 - Verdict is BULL or BEAR only. No neutral. If you are uncertain, pick the side you lean toward and explain why.
 - Your reasoning must cite specific facts from the dossier — do not summarize, judge.
 - Be willing to dissent. If the dossier is too optimistic, say BEAR with conviction. If it is too pessimistic, say BULL.
 - Output ONLY valid JSON — no markdown, no preamble.`
+
+const BULL_ANALYST_PROMPT = `You are a long-only optimistic analyst. Build the strongest bull case based on the evidence. You are an independent equity analyst on the NoFomo AI Council. Your job: read a radar research dossier and deliver a verdict.${COUNCIL_RULES}`
+
+const BEAR_ANALYST_PROMPT = `You are a forensic short-seller. Dismantle this thesis and find what the bulls are missing. You are an independent equity analyst on the NoFomo AI Council. Your job: read a radar research dossier and deliver a verdict.${COUNCIL_RULES}`
 
 const CIO_PROMPT = `You are the Chief Investment Officer (CIO) of the NoFomo AI Council. Two independent analysts — Gemini and DeepSeek — have each delivered a verdict on a company. Your job: weigh both perspectives, break the tie if they disagree, and produce the final scored opportunity.
 
@@ -39,24 +42,34 @@ router.post('/', async (req: Request, res: Response) => {
   }
 })
 
+function jaccardSimilarity(a: string, b: string): number {
+  const tokA = new Set(a.toLowerCase().split(/\W+/).filter(Boolean))
+  const tokB = new Set(b.toLowerCase().split(/\W+/).filter(Boolean))
+  const intersection = [...tokA].filter(t => tokB.has(t)).length
+  const union = new Set([...tokA, ...tokB]).size
+  return union === 0 ? 0 : intersection / union
+}
+
 export async function runCouncil(dossier: string): Promise<{
   gemini: CouncilVerdict
   deepseek: CouncilVerdict
   cio: CIOArbiter
+  low_diversity?: true
 }> {
   const truncatedDossier = dossier.slice(0, 12000)
 
   const userPrompt = `Here is the radar research dossier:\n\n${truncatedDossier}\n\nDeliver your verdict as JSON: {"verdict": "BULL" | "BEAR", "reasoning": "..."}`
 
-  // Run Gemini and DeepSeek sequentially (free tier ~1 RPM rate limit)
-  const geminiResult = await callGemini(COUNCIL_PROMPT, userPrompt).then(parseVerdict)
-  console.log(`[council] Gemini: ${geminiResult.verdict}`)
+  // Gemini is the BEAR analyst; DeepSeek is the BULL analyst
+  const geminiResult = await callGemini(BEAR_ANALYST_PROMPT, userPrompt).then(parseVerdict)
+  console.log(`[council] Gemini (bear lens): ${geminiResult.verdict}`)
 
-  // Rate limit gap for free tier (~1 RPM)
-  await new Promise(r => setTimeout(r, 2000))
+  // 3-second stagger between AnyAPI calls to avoid rate limits
+  const staggerMs = process.env.ANYAPI_API_KEY ? 3000 : 2000
+  await new Promise(r => setTimeout(r, staggerMs))
 
-  const deepseekResult = await callDeepSeek(COUNCIL_PROMPT, userPrompt)
-  console.log(`[council] DeepSeek: ${deepseekResult.verdict}`)
+  const deepseekResult = await callDeepSeek(BULL_ANALYST_PROMPT, userPrompt)
+  console.log(`[council] DeepSeek (bull lens): ${deepseekResult.verdict}`)
 
   // CIO arbiter — Claude reads both verdicts
   const cioUserPrompt = `## Radar Dossier
@@ -83,11 +96,21 @@ Deliver your final CIO verdict as JSON:
   const cioResult = parseCIO(cioText)
   console.log(`[council] CIO: ${cioResult.verdict}, Tier ${cioResult.tier}, Score ${cioResult.score}`)
 
-  return {
+  const result: { gemini: CouncilVerdict; deepseek: CouncilVerdict; cio: CIOArbiter; low_diversity?: true } = {
     gemini: geminiResult,
     deepseek: deepseekResult,
     cio: cioResult,
   }
+
+  if (
+    geminiResult.verdict === deepseekResult.verdict &&
+    jaccardSimilarity(geminiResult.reasoning, deepseekResult.reasoning) > 0.4
+  ) {
+    result.low_diversity = true
+    console.log('[council] Low diversity detected — both analysts agreed with similar reasoning')
+  }
+
+  return result
 }
 
 async function callDeepSeek(systemPrompt: string, userPrompt: string): Promise<CouncilVerdict> {

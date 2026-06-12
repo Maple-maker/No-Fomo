@@ -11,10 +11,13 @@ import { getSupabaseAdmin } from '../lib/supabase'
 import { extractJsonBlock, buildRadarRow } from '../lib/opportunity'
 import { selectMode } from '../agents/tiers'
 import { runCouncil } from './council'
+import type { CouncilVerdict, CIOArbiter } from '../agents/types'
 import { computeSignals } from '../lib/signals'
 import { tagThemes } from '../lib/themes'
 import { getPeerPositioning } from '../lib/peers'
+import { getStockData } from '../lib/stockData'
 import { evaluateAsymmetry } from '../lib/asymmetryDecay'
+import { computeConfidence } from '../lib/confidence'
 
 const router = Router()
 
@@ -203,18 +206,12 @@ router.post('/', async (req: Request, res: Response) => {
         enrichment.tags = tagThemes(enrichment.ticker)
       }
 
-      // Compute peer positioning if we have stock data
+      // Compute peer positioning using stock data
       if (enrichment) {
         try {
-          const sd = {
-            ps_ttm: undefined, // Will be filled in enrich.ts, using simplistic data for now
-            rev_growth_yoy: enrichment.indicators?.volume.ratio, // placeholder
-            ev_ebitda: undefined,
-            gross_margin: undefined,
-          }
-          // Actually, let's fetch stock data separately for peer comparison
-          const stockData = await Promise.resolve(null) // Will be populated in enrich flow
-          // Skip peer positioning for now if we don't have stock data — will be added in enrich.ts
+          const sd = await getStockData(ticker)
+          if (sd) peerPositioning = await getPeerPositioning(ticker, sd)
+          if (peerPositioning) console.log(`[radar] Peer positioning: ${peerPositioning.verdict} (${peerPositioning.percentileRank}th percentile)`)
         } catch (e) {
           console.error('[radar] Peer positioning failed:', e instanceof Error ? e.message : e)
         }
@@ -228,10 +225,18 @@ router.post('/', async (req: Request, res: Response) => {
 
     // Auto-select council mode based on signal strength
     const modeConfig = selectMode(undefined, { score: structured.score, tier: structured.tier, tripleSignal: structured.tripleSignal })
-    let councilResult: Awaited<ReturnType<typeof runCouncil>> | null = null
+    // council.ts exposes runCouncil(dossier) → { gemini, deepseek, cio }. Map it onto the
+    // bull/bear/neutral/summary shape the rest of this route + buildRadarRow expect.
+    let councilResult: { bull: CouncilVerdict; bear: CouncilVerdict; neutral: CIOArbiter; summary: string } | null = null
     if (!skipCouncil) {
       try {
-        councilResult = await runCouncil(finalText, modeConfig.mode, enrichment ?? undefined)
+        const raw = await runCouncil(finalText)
+        councilResult = {
+          bull: raw.gemini,
+          bear: raw.deepseek,
+          neutral: raw.cio,
+          summary: raw.cio.synthesis,
+        }
         console.log(`[radar] Council: mode=${modeConfig.mode} bull=${councilResult.bull.verdict} bear=${councilResult.bear.verdict} neutral=${councilResult.neutral.verdict} score=${councilResult.neutral.score}`)
       } catch (e) {
         console.error('[radar] Council failed:', e instanceof Error ? e.message : e)
@@ -262,6 +267,18 @@ router.post('/', async (req: Request, res: Response) => {
       researchedAt: new Date().toISOString(),
     })
     console.log(`[radar] ${ticker} asymmetry: ${asymmetry.status} (open=${asymmetry.openScore}/100) — ${asymmetry.reasons[0]}`)
+
+    // ── Confidence scoring ──
+    const confidence = computeConfidence(finalText, {
+      ...(enrichment ?? {}),
+      insider: insiderResult ? {
+        totalBuys: insiderResult.totalBuys,
+        totalSells: insiderResult.totalSells,
+        transactions: insiderResult.transactions,
+      } : null,
+    })
+    const dataFreshness = new Date().toISOString()
+    console.log(`[radar] Confidence: ${confidence.score} (${confidence.label}) — ${confidence.factors.join(', ')}`)
 
     const row = buildRadarRow(
       structured,
@@ -364,6 +381,11 @@ router.post('/', async (req: Request, res: Response) => {
       },
     )
 
+    // Add confidence fields to the persisted row
+    ;(row as any).confidence_score = confidence.score
+    ;(row as any).confidence_label = confidence.label
+    ;(row as any).data_freshness = dataFreshness
+
     let persisted = false
     if (!skipPersist && supabase) {
       // Delete existing entries for this ticker (prevents duplicates + prunes if now closed)
@@ -376,6 +398,22 @@ router.post('/', async (req: Request, res: Response) => {
         const { error } = await supabase.from('radar_opportunities').insert(row as any)
         if (error) { res.status(500).json({ error: 'Supabase write failed', detail: error.message }); return }
         persisted = true
+        // Fire push notifications for Tier 1/2 discoveries (non-blocking)
+        if (row.tier <= 2) {
+          import('./notify').then(m => m.dispatchNotifications({
+            ticker,
+            score: row.overall_score ?? 0,
+            tier: row.tier,
+          })).catch(e => console.warn('[radar] notify dispatch failed:', e))
+        }
+        // Match against user theses — all tiers; per-thesis notify prefs gate pushes (non-blocking)
+        import('./thesis').then(m => m.checkThesisMatches({
+          ticker,
+          tier: row.tier,
+          score: row.overall_score ?? 0,
+          bluf: row.thesis ?? '',
+          snapshot: row.data_snapshot as unknown as Record<string, unknown>,
+        })).catch(e => console.warn('[radar] thesis check failed:', e))
       }
     }
 
@@ -392,6 +430,9 @@ router.post('/', async (req: Request, res: Response) => {
 
     res.json({
       ticker, tier: row.tier, score: row.overall_score,
+      confidenceScore: confidence.score,
+      confidenceLabel: confidence.label,
+      dataFreshness,
       tripleSignal: row.data_snapshot.triple_signal,
       // ── Asymmetry window status ──
       windowStatus: asymmetry.status,

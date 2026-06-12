@@ -9,6 +9,7 @@ final class FeedViewModel: ObservableObject {
     @Published var hasMore = true
     @Published var errorMessage: String? = nil
     @Published var searchText = ""
+    @Published var serverOnline = false
 
     private var page = 0
     private let pageSize = 15
@@ -24,8 +25,7 @@ final class FeedViewModel: ObservableObject {
             opportunities = results
             hasMore = results.count == pageSize
         } catch {
-            print("[feed] Supabase error: \(error.localizedDescription)")
-            // Don't seed mocks — show empty state instead
+            errorMessage = "Feed error: \(error.localizedDescription)"
             opportunities = []
             hasMore = false
         }
@@ -49,7 +49,7 @@ final class FeedViewModel: ObservableObject {
     }
 
     /// Scan a new ticker via the radar server
-    func scanTicker(_ ticker: String) async {
+    func scanTicker(_ ticker: String, isPremium: Bool = false) async {
         let cleaned = ticker.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
             .replacingOccurrences(of: "$", with: "")
         guard !cleaned.isEmpty else { return }

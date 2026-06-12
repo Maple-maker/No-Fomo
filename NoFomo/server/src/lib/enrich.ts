@@ -22,6 +22,7 @@ import { analyzeDividendSignal, type DividendSignal } from './dividendSignals'
 import { getRedditMentionVelocity, type SocialSignal } from './socialSentiment'
 import { analyzeOptionsVol, type OptionsSignal } from './optionsSignals'
 import { trackPeerEarnings, type PeerEarningsSignal } from './peerEarningsSignals'
+import { runDCF, type DCFResult } from './dcfValuation'
 
 // ── Types ──
 
@@ -112,6 +113,7 @@ export interface TickerEnrichment {
   socialSentiment?: SocialSignal | null
   optionsSignal?: OptionsSignal | null
   peerEarnings?: PeerEarningsSignal | null
+  dcfValuation?: DCFResult | null
 }
 
 // ── Explainer text ──
@@ -518,6 +520,14 @@ export async function fullEnrich(ticker: string, webSourceUrls: string[] = []): 
   console.log(`[enrich] ${clean}: analyst=${!!analyst} indicators=${!!indicators} inst=${institutional.length} catalysts=${catalysts.length} headlines=${headlines.length} quiver=${!!quiver} ai=${!!aiSnapshot} short=${!!shortInterest} sec=${!!secSignal} jobs=${!!jobSignal} transcript=${!!transcriptSignal} shortReports=${shortReportSignal?.length || 0}`)
   console.log(`[enrich] ${clean} Phase2: revisions=${analystRevisions?.signal ? 'Y' : 'n'} squeeze=${squeezeAnalysis?.shortSqueezePct ?? 'n'}% buyback=${buybackSignal?.buybackActive ?? 'n'} div=${dividendSignal?.paysDividend ?? 'n'} reddit=${socialSignal?.mentionVelocity ?? 'n'}x iv=${optionsSignal?.impliedVol ?? 'n'} peers=${peerEarnings ? peerEarnings.sectorMomentum : 'n'}`)
 
+  // ── DCF valuation ──
+  const growthRate = sd.rev_growth_yoy != null
+    ? Math.max(0, Math.min(0.30, sd.rev_growth_yoy / 100))
+    : 0.08
+  const dcf = (sd.fcf != null && sd.fcf > 0 && sd.cash_and_equiv != null && sd.debt_total != null && sd.shares_outstanding != null && sd.price != null && sd.price > 0)
+    ? runDCF({ fcf: sd.fcf, cash: sd.cash_and_equiv, debt: sd.debt_total, shares: sd.shares_outstanding, price: sd.price, growth: growthRate })
+    : null
+
   // ── Buy levels ──
   const buyLevels = computeBuyLevels(
     sd.price || 0,
@@ -563,5 +573,6 @@ export async function fullEnrich(ticker: string, webSourceUrls: string[] = []): 
     socialSentiment: socialSignal ?? null,
     optionsSignal: optionsSignal ?? null,
     peerEarnings: peerEarnings ?? null,
+    dcfValuation: dcf,
   }
 }

@@ -1,12 +1,10 @@
 import SwiftUI
 
-// MARK: — Opportunity Card (the atomic unit)
-// Pixel-matched to No Fomo.html design prototype
-
 struct OpportunityCard: View {
     let opportunity: Opportunity
     var onOpen: () -> Void = {}
     var onUnlock: () -> Void = {}
+    var onBookmark: ((Opportunity) -> Void)? = nil
     var density: CardDensity = .regular
     var gaugeStyle: ScoreGauge.GaugeStyle = .ring
     var isLocked: Bool = true
@@ -17,6 +15,10 @@ struct OpportunityCard: View {
     }
 
     @State private var isPressed = false
+    @State private var isBookmarked = false
+    @State private var showScoreTooltip = false
+    @State private var showBLUFTooltip = false
+    @State private var showTripleTooltip = false
 
     private var pad: CGFloat { density == .compact ? 14 : 17 }
     private var gap: CGFloat { density == .compact ? 12 : 15 }
@@ -31,7 +33,7 @@ struct OpportunityCard: View {
                 upcomingCompact
                 metricsStrip
                 radarFreshnessLine
-                councilRow
+                AICouncilRow(council: opportunity.council)
                 buyZonesFooter
             }
             .padding(pad)
@@ -49,38 +51,44 @@ struct OpportunityCard: View {
         }, perform: {})
     }
 
-    // MARK: Header — tier badge + triple signal left, score gauge right
     private var headerRow: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 8) {
-                // Badge row
                 HStack(spacing: 7) {
                     TierBadge(tier: opportunity.tier)
                     if opportunity.tripleSignal {
                         TripleSignalBadge()
+                        Button { showTripleTooltip = true } label: {
+                            Image(systemName: "questionmark.circle")
+                                .font(.system(size: 11))
+                                .foregroundColor(DS.Color.textMuted)
+                        }
+                        .popover(isPresented: $showTripleTooltip) {
+                            Text("Triple Signal — three independent indicators fired simultaneously: insider buying, analyst divergence, and a near-term catalyst. Rare and high-conviction.")
+                                .font(DS.Font.caption())
+                                .foregroundColor(.white)
+                                .padding(12)
+                                .frame(maxWidth: 220)
+                                .background(DS.Color.elevated)
+                        }
                     }
                     if let lane = opportunity.detectionLane, !lane.isEmpty {
                         RadarDetectionBadge(lane: lane)
                     }
                 }
 
-                // Logo + Ticker row
                 HStack(alignment: .center, spacing: 10) {
                     TickerLogo(ticker: opportunity.ticker, size: 32)
                     VStack(alignment: .leading, spacing: 2) {
-                        // Ticker (mono, no $ prefix)
                         Text(opportunity.ticker)
                             .font(DS.Font.mono(21))
                             .foregroundColor(.white)
-
-                        // Company name
                         Text(opportunity.companyName)
                             .font(.system(size: 13))
                             .foregroundColor(DS.Color.textSecondary)
                     }
                 }
 
-                // Sector
                 Text(opportunity.sector)
                     .font(.system(size: 11))
                     .foregroundColor(DS.Color.textMuted)
@@ -88,47 +96,88 @@ struct OpportunityCard: View {
 
             Spacer()
 
-            ScoreGauge(
-                score: opportunity.score,
-                tier: opportunity.tier,
-                size: 58,
-                style: gaugeStyle
-            )
-        }
-    }
-
-    // MARK: BLUF — bottom line up front
-    private var blufText: some View {
-        Text(opportunity.bluf)
-            .font(.system(size: 14.5, weight: .semibold))
-            .foregroundColor(.white)
-            .lineSpacing(3)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-
-    // MARK: Notification subline
-    private var notificationSubline: some View {
-        Group {
-            if !opportunity.notificationLine.isEmpty {
-                HStack(spacing: 6) {
-                    Text(opportunity.notificationLine)
-                        .font(.system(size: 11.5))
-                        .foregroundColor(DS.Color.textSecondary)
-                        .lineSpacing(2)
-                        .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .trailing, spacing: 6) {
+                Button {
+                    isBookmarked.toggle()
+                    onBookmark?(opportunity)
+                } label: {
+                    Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                        .font(.system(size: 15))
+                        .foregroundColor(isBookmarked ? DS.Color.tier1 : DS.Color.textMuted)
                 }
-                .padding(10)
-                .background(DS.Color.elevated)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 7)
-                        .stroke(DS.Color.border, lineWidth: 0.5)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 7))
+                .buttonStyle(PlainButtonStyle())
+
+                HStack(spacing: 4) {
+                    Button { showScoreTooltip = true } label: {
+                        Image(systemName: "questionmark.circle")
+                            .font(.system(size: 11))
+                            .foregroundColor(DS.Color.textMuted)
+                    }
+                    .popover(isPresented: $showScoreTooltip) {
+                        Text("Conviction Score — how strongly the AI council backs this idea, 0–100. 75+ = high conviction.")
+                            .font(DS.Font.caption())
+                            .foregroundColor(.white)
+                            .padding(12)
+                            .frame(maxWidth: 220)
+                            .background(DS.Color.elevated)
+                    }
+
+                    ScoreGauge(
+                        score: opportunity.score,
+                        tier: opportunity.tier,
+                        size: 58,
+                        style: gaugeStyle
+                    )
+                }
+
+                if let label = opportunity.confidenceLabel {
+                    ConfidenceDot(label: label)
+                }
             }
         }
     }
 
-    // MARK: Happening Now — price action, TA, AI synopsis
+    private var blufText: some View {
+        HStack(alignment: .top, spacing: 5) {
+            Text(opportunity.bluf)
+                .font(.system(size: 14.5, weight: .semibold))
+                .foregroundColor(.white)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+            Button { showBLUFTooltip = true } label: {
+                Image(systemName: "questionmark.circle")
+                    .font(.system(size: 11))
+                    .foregroundColor(DS.Color.textMuted)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .popover(isPresented: $showBLUFTooltip) {
+                Text("BLUF — Bottom Line Up Front. The single most important thing to know about this opportunity.")
+                    .font(DS.Font.caption())
+                    .foregroundColor(.white)
+                    .padding(12)
+                    .frame(maxWidth: 220)
+                    .background(DS.Color.elevated)
+            }
+        }
+    }
+
+    private var notificationSubline: some View {
+        Group {
+            if !opportunity.notificationLine.isEmpty {
+                Text(opportunity.notificationLine)
+                    .font(.system(size: 11.5))
+                    .foregroundColor(DS.Color.textSecondary)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(DS.Color.elevated)
+                    .overlay(RoundedRectangle(cornerRadius: 7).stroke(DS.Color.border, lineWidth: 0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 7))
+            }
+        }
+    }
+
     @ViewBuilder
     private var happeningNowSection: some View {
         if !opportunity.aiSynopsis.isEmpty {
@@ -176,30 +225,20 @@ struct OpportunityCard: View {
                         .lineLimit(1)
                 }
 
-                if let attributed = try? AttributedString(
-                    markdown: opportunity.aiSynopsis
-                ) {
-                    Text(attributed)
-                        .font(DS.Font.body(14))
-                        .foregroundColor(DS.Color.textSecondary)
-                        .lineSpacing(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .environment(\.openURL, OpenURLAction { url in
-                            UIApplication.shared.open(url)
-                            return .handled
-                        })
-                } else {
-                    Text(opportunity.aiSynopsis)
-                        .font(DS.Font.body(14))
-                        .foregroundColor(DS.Color.textSecondary)
-                        .lineSpacing(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                let synopsisText = (try? AttributedString(markdown: opportunity.aiSynopsis))
+                    .map { Text($0) } ?? Text(opportunity.aiSynopsis)
+                synopsisText
+                    .font(DS.Font.body(14))
+                    .foregroundColor(DS.Color.textSecondary)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .environment(\.openURL, OpenURLAction { url in
+                        UIApplication.shared.open(url); return .handled
+                    })
             }
         }
     }
 
-    // MARK: Upcoming — next catalyst/earnings
     private var upcomingCompact: some View {
         Group {
             if !opportunity.upcomingEvents.isEmpty {
@@ -228,7 +267,6 @@ struct OpportunityCard: View {
         }
     }
 
-    // MARK: Metrics strip — Price | Upside | Mkt Cap | Prob
     private var metricsStrip: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 4), spacing: 0) {
             MetricPill(label: "Price", value: "$\(fmtPrice(opportunity.price))")
@@ -242,7 +280,6 @@ struct OpportunityCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
-    // MARK: Radar freshness indicator
     @ViewBuilder
     private var radarFreshnessLine: some View {
         if let lane = opportunity.detectionLane, !lane.isEmpty {
@@ -275,19 +312,11 @@ struct OpportunityCard: View {
     }
 
     private func formatRelativeDate(_ iso: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: iso) else { return iso }
-        let relFormatter = RelativeDateTimeFormatter()
-        relFormatter.unitsStyle = .abbreviated
-        return relFormatter.localizedString(for: date, relativeTo: Date())
+        guard let date = ISO8601DateFormatter().date(from: iso) else { return iso }
+        let f = RelativeDateTimeFormatter(); f.unitsStyle = .abbreviated
+        return f.localizedString(for: date, relativeTo: Date())
     }
 
-    // MARK: AI Council row
-    private var councilRow: some View {
-        AICouncilRow(council: opportunity.council)
-    }
-
-    // MARK: Buy zones footer
     private var buyZonesFooter: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -301,16 +330,12 @@ struct OpportunityCard: View {
                     .foregroundColor(DS.Color.textSecondary)
             }
 
-            BuyZoneCards(
-                buyZones: opportunity.buyZones,
-                isLocked: isLocked,
-                onUnlock: onUnlock
-            )
+            BuyZoneCards(buyZones: opportunity.buyZones, isLocked: isLocked, onUnlock: onUnlock)
         }
     }
 }
 
-// MARK: — Metric pill (used in metrics strip)
+// MARK: — Supporting views
 
 private struct MetricPill: View {
     let label: String
@@ -332,17 +357,11 @@ private struct MetricPill: View {
     }
 }
 
-// MARK: — AI Council row (COUNCIL label + 3 model chips)
-
 struct AICouncilRow: View {
     let council: AICouncil
 
     private var members: [(name: String, verdict: Verdict)] {
-        [
-            ("Gemini", council.gemini),
-            ("DeepSeek", council.deepseek),
-            ("CIO", council.cio),
-        ]
+        [("Gemini", council.gemini), ("DeepSeek", council.deepseek), ("CIO", council.cio)]
     }
 
     var body: some View {
@@ -379,15 +398,10 @@ struct CouncilChip: View {
         .frame(maxWidth: .infinity)
         .frame(height: 26)
         .background(DS.Color.elevated)
-        .overlay(
-            RoundedRectangle(cornerRadius: 7)
-                .stroke(color.opacity(0.22), lineWidth: 0.5)
-        )
+        .overlay(RoundedRectangle(cornerRadius: 7).stroke(color.opacity(0.22), lineWidth: 0.5))
         .clipShape(RoundedRectangle(cornerRadius: 7))
     }
 }
-
-// MARK: — Buy zone cards (3 levels)
 
 struct BuyZoneCards: View {
     let buyZones: BuyZones
@@ -396,11 +410,7 @@ struct BuyZoneCards: View {
     var compact: Bool = true
 
     private var zones: [(label: String, price: Double)] {
-        [
-            ("Aggressive", buyZones.aggressive),
-            ("Base", buyZones.base),
-            ("Conservative", buyZones.conservative),
-        ]
+        [("Aggressive", buyZones.aggressive), ("Base", buyZones.base), ("Conservative", buyZones.conservative)]
     }
 
     var body: some View {
@@ -420,10 +430,7 @@ struct BuyZoneCards: View {
                     .padding(compact ? 10 : 12)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(DS.Color.elevated)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 9)
-                            .stroke(DS.Color.border, lineWidth: 0.5)
-                    )
+                    .overlay(RoundedRectangle(cornerRadius: 9).stroke(DS.Color.border, lineWidth: 0.5))
                     .clipShape(RoundedRectangle(cornerRadius: 9))
                 }
             }
@@ -441,22 +448,14 @@ struct BuyZoneCards: View {
                     .foregroundColor(DS.Color.bull)
                     .padding(.horizontal, 16)
                     .frame(height: 34)
-                    .background(
-                        DS.Color.bull.opacity(0.12)
-                            .background(DS.Color.card)
-                    )
-                    .overlay(
-                        Capsule()
-                            .stroke(DS.Color.bull.opacity(0.4), lineWidth: 0.5)
-                    )
+                    .background(DS.Color.bull.opacity(0.12).background(DS.Color.card))
+                    .overlay(Capsule().stroke(DS.Color.bull.opacity(0.4), lineWidth: 0.5))
                     .clipShape(Capsule())
                 }
             }
         }
     }
 }
-
-// MARK: — Radar Detection Badge
 
 struct RadarDetectionBadge: View {
     let lane: String
@@ -494,9 +493,30 @@ struct RadarDetectionBadge: View {
     }
 }
 
-// MARK: — Formatting helpers
+struct ConfidenceDot: View {
+    let label: String
+
+    private var dotColor: Color {
+        switch label {
+        case "high": return .green
+        case "medium": return .yellow
+        default: return .red
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "circle.fill")
+                .font(.system(size: 7))
+                .foregroundColor(dotColor)
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundColor(dotColor)
+                .tracking(0.4)
+        }
+    }
+}
 
 private func fmtPrice(_ n: Double) -> String {
     String(format: "%.2f", n)
-    // Note: prototype uses toLocaleString but 2 decimals works for USD
 }

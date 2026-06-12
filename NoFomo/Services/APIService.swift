@@ -4,8 +4,7 @@ import Foundation
 final class APIService {
     static let shared = APIService()
 
-    // Server is on this Linux machine with public IP
-    private let baseURL = "http://72.61.206.167:3002"
+    private let baseURL = "https://server-zeta-six-94.vercel.app"
 
     private let session: URLSession = {
         let config = URLSessionConfiguration.default
@@ -35,6 +34,30 @@ final class APIService {
 
     struct RadarSignals: Codable {
         let signals: [String: Bool]?
+    }
+
+    private struct ThesisMatchResponse: Codable {
+        let matches: [RadarRow]
+    }
+
+    /// Run a thesis against the server's /thesis/match endpoint.
+    /// Sends the thesis with snake_case keys (the server normalizes either style)
+    /// and decodes the returned radar_opportunities rows via RadarRow.
+    func matchThesis(_ thesis: CustomThesis) async throws -> [Opportunity] {
+        var req = URLRequest(url: URL(string: "\(baseURL)/thesis/match")!)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONEncoder().encode(["thesis": thesis])
+
+        let (data, resp) = try await session.data(for: req)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else {
+            throw NSError(domain: "APIService", code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Server returned error"])
+        }
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(ThesisMatchResponse.self, from: data).matches.map { $0.toOpportunity() }
     }
 
     /// Scan a ticker via the radar server. Returns an Opportunity.
