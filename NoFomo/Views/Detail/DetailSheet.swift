@@ -61,6 +61,13 @@ struct DetailSheet: View {
     @State private var saved = false
     @State private var selectedScore: ScoreDetail? = nil
     @State private var selectedHorizon: PriceChartHorizon = .threeMonths
+    @State private var chartHistory: [Double] = []
+    @State private var chartLoading = false
+    @State private var chartFailed = false
+
+    private var effectiveChartHistory: [Double] {
+        !chartHistory.isEmpty ? chartHistory : opportunity.priceHistory
+    }
 
     var body: some View {
         NavigationStack {
@@ -77,6 +84,7 @@ struct DetailSheet: View {
                             priceChartSection          // Price sparkline — visual context
                             // ── SCORING (moved up — this is the signal) ──
                             upsidePotentialSection     // Asymmetry / Conviction / Catalyst / Mgmt
+                            signalLedgerSection        // RADAR V2 source-level evidence
                             // ── UPSIDE ──
                             bullCaseSection            // Why it could 3x+
                             competitiveAdvantagesSection // Moat — why they can pull it off
@@ -99,6 +107,32 @@ struct DetailSheet: View {
                 }
             }
             .navigationBarHidden(true)
+        }
+        .task { await loadChartIfNeeded() }
+    }
+
+    private func loadChartIfNeeded() async {
+        guard effectiveChartHistory.count < 20, !chartLoading else { return }
+        chartLoading = true
+        chartFailed = false
+        defer { chartLoading = false }
+        // Primary: live daily closes pulled directly from the device. Yahoo rate-limits
+        // datacenter IPs (which is why the server backfill 429s), but not phones.
+        if let closes = try? await APIService.shared.fetchYahooCloses(ticker: opportunity.ticker),
+           closes.count >= 20 {
+            chartHistory = closes
+            return
+        }
+        // Fallback: server chart endpoint (used if Yahoo is unreachable, and once Vercel is live).
+        do {
+            let payload = try await APIService.shared.fetchChart(ticker: opportunity.ticker)
+            if payload.priceHistory.count >= 20 {
+                chartHistory = payload.priceHistory
+            } else {
+                chartFailed = true
+            }
+        } catch {
+            chartFailed = true
         }
     }
 
@@ -136,8 +170,10 @@ struct DetailSheet: View {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text("+\(Int(opportunity.upside))% upside")
                         .font(DS.Font.mono(15)).foregroundColor(DS.Color.bull)
-                    if opportunity.upside > 0 {
-                        Text("· potential \(Int(opportunity.upside))% return")
+                    if opportunity.upside > 0 && opportunity.price > 0 {
+                        // Target derived from upside so the two figures can never contradict.
+                        let target = opportunity.price * (1 + opportunity.upside / 100)
+                        Text("→ $\(target >= 10 ? String(format: "%.0f", target) : String(format: "%.2f", target)) target")
                             .font(.system(size: 12)).foregroundColor(DS.Color.tier1.opacity(0.8))
                     }
                 }
@@ -192,10 +228,10 @@ struct DetailSheet: View {
     // MARK: Price chart with TA overlay + time horizon selector
     private var priceChartSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if !opportunity.priceHistory.isEmpty {
-                Divider().background(DS.Color.border)
+            Divider().background(DS.Color.border)
 
-                let fullData = opportunity.priceHistory
+            if effectiveChartHistory.count >= 2 {
+                let fullData = effectiveChartHistory
                 let horizonCount = selectedHorizon.tradingDays
                 let data = Array(fullData.suffix(min(horizonCount, fullData.count)))
                 let dataMin = data.min() ?? 0
@@ -351,8 +387,93 @@ struct DetailSheet: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 12)
+                .padding(.bottom, 8)
+            } else if chartLoading {
+                HStack(spacing: 10) {
+                    ProgressView().tint(DS.Color.accent)
+                    Text("Loading chart…")
+                        .font(.system(size: 13))
+                        .foregroundColor(DS.Color.textMuted)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+            } else {
+                VStack(spacing: 12) {
+                    Text("Chart unavailable")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(DS.Color.textSecondary)
+                    Button(action: { Task { await loadChartIfNeeded() } }) {
+                        Text("Retry")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(DS.Color.accent)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 36)
             }
         }
+    }
+
+    // MARK: RADAR V2 Signal Ledger
+    private var signalLedgerSection: some View {
+        let signals = opportunity.scoreBreakdown?.signals ?? []
+        if signals.isEmpty && opportunity.repriceGap == nil && opportunity.regimeFlags.isEmpty {
+            return AnyView(EmptyView())
+        }
+        return AnyView(
+            VStack(alignment: .leading, spacing: 10) {
+                Divider().background(DS.Color.border)
+                HStack {
+                    sectionLabel("RADAR V2 SIGNAL LEDGER")
+                    Spacer()
+                    if let gap = opportunity.repriceGap?.expectedDriftRemainingPct {
+                        Text("Gap \(gap >= 0 ? "+" : "")\(String(format: "%.1f", gap))%")
+                            .font(DS.Font.mono(11))
+                            .foregroundColor(DS.Color.tier1)
+                    }
+                }
+                ForEach(Array(signals.prefix(5).enumerated()), id: \.offset) { _, signal in
+                    Button(action: {
+                        if let url = URL(string: signal.sourceUrl) { UIApplication.shared.open(url) }
+                    }) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(signal.type.replacingOccurrences(of: "_", with: " ").uppercased())
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(signal.direction >= 0 ? DS.Color.bull : DS.Color.bear)
+                                Spacer()
+                                Text(String(format: "%.2f", signal.decayedScore))
+                                    .font(DS.Font.mono(11))
+                                    .foregroundColor(DS.Color.textMuted)
+                            }
+                            Text(signal.evidence)
+                                .font(.system(size: 12.5))
+                                .foregroundColor(DS.Color.textSecondary)
+                                .lineLimit(2)
+                        }
+                        .padding(10)
+                        .background(DS.Color.elevated)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                if !opportunity.regimeFlags.isEmpty {
+                    HStack(spacing: 6) {
+                        ForEach(opportunity.regimeFlags.prefix(4), id: \.self) { flag in
+                            Text(flag.replacingOccurrences(of: "_", with: " "))
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(DS.Color.textSecondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(DS.Color.elevated)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+        )
     }
 
     // MARK: Council Summary (AI debate verdict)
@@ -762,21 +883,25 @@ struct DetailSheet: View {
 
     // MARK: Financials
     private var financialsSection: some View {
-        ExpandableSection(title: "Financials") {
-            VStack(spacing: 0) {
-                ForEach(Array(opportunity.financials.enumerated()), id: \.offset) { i, row in
-                    HStack {
-                        Text(row[0]).font(.system(size: 13)).foregroundColor(DS.Color.textSecondary)
-                        Spacer()
-                        Text(row[1]).font(DS.Font.mono(13)).foregroundColor(.white)
+        Group {
+            if !opportunity.financials.isEmpty {
+                ExpandableSection(title: "Financials") {
+                    VStack(spacing: 0) {
+                        ForEach(Array(opportunity.financials.enumerated()), id: \.offset) { i, row in
+                            HStack {
+                                Text(row[0]).font(.system(size: 13)).foregroundColor(DS.Color.textSecondary)
+                                Spacer()
+                                Text(row[1]).font(DS.Font.mono(13)).foregroundColor(.white)
+                            }
+                            .padding(.horizontal, 13).padding(.vertical, 11)
+                            .background(i % 2 == 0 ? Color.clear : DS.Color.card)
+                            if i < opportunity.financials.count - 1 { Divider().background(DS.Color.border) }
+                        }
                     }
-                    .padding(.horizontal, 13).padding(.vertical, 11)
-                    .background(i % 2 == 0 ? Color.clear : DS.Color.card)
-                    if i < opportunity.financials.count - 1 { Divider().background(DS.Color.border) }
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(DS.Color.border, lineWidth: 0.5))
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(DS.Color.border, lineWidth: 0.5))
         }
     }
 
@@ -1173,11 +1298,7 @@ struct DetailSheet: View {
     // MARK: — Key Metrics with ? explainers
     private var keyMetricsSection: some View {
         let km = opportunity.keyMetrics
-        let fin = opportunity.financials
-        // Show if we have keyMetrics or financials
-        let hasKeyMetrics = km != nil && ((km?.revenue?.isEmpty == false) || (km?.eps?.isEmpty == false))
-        let hasFinancials = !fin.isEmpty
-        if !hasKeyMetrics && !hasFinancials { return AnyView(EmptyView()) }
+        guard let km, km.hasAnyRatio else { return AnyView(EmptyView()) }
 
         return AnyView(
             ExpandableSection(
@@ -1191,32 +1312,13 @@ struct DetailSheet: View {
                 )
             ) {
                 VStack(spacing: 0) {
-                    // Dedicated key metrics with explainers
-                    if let km = km {
-                        metricRow("Revenue", km.revenue, explainer: "How much money the company brought in last year. Growing fast = demand is strong. Shrinking = losing customers or cutting prices.")
-                        metricRow("Net Income", km.netIncome, explainer: "What's left after paying everyone — employees, suppliers, taxes. The actual profit. If this is positive, the business pays for itself. If negative, they're burning cash.")
-                        metricRow("EPS", km.eps, explainer: "Your share of the profit. Each share you own represents this much earnings. If EPS grows 30% a year, the stock price should follow — unless something breaks the story.")
-                        metricRow("P/E (Trailing)", km.peTrailing, explainer: "How many dollars you're paying for $1 of last year's profit. A typical company trades at 20-25x. Anything above 50x means investors expect earnings to grow several times over before this price makes sense. The bet: growth will catch up to the price before the music stops.")
-                        metricRow("P/E (Forward)", km.peForward, explainer: "What you're paying for NEXT year's expected profit. If forward P/E is much lower than trailing, earnings are expected to jump significantly. Still high? The market is pricing in years of explosive growth — execution has to be nearly perfect.")
-                        metricRow("EV/EBITDA", km.evEbitda, explainer: "The company's total price tag (including debt) divided by its operating profit. The S&P 500 averages ~15x. A high number like 50x+ means you're paying for a future that hasn't happened yet — the business needs to grow into this valuation over many years.")
-                        metricRow("Gross Margin", km.grossMargin, explainer: "For every $100 of sales, how much is left after making the product. Software companies typically run 70-85% — that's excellent. Below 30% suggests a low-margin business (retail, manufacturing) where profits can be squeezed easily.")
-                        metricRow("Operating Margin", km.operatingMargin, explainer: "After paying for the product AND running the business (offices, salaries, sales), what % is profit. Above 20% is strong — the business has real operating leverage. Below 10% means thin margins where a small cost increase can wipe out profits.")
-                        metricRow("Cash", km.cashAndEquivalents, explainer: "Money in the bank. Companies with lots of cash can survive downturns, acquire competitors, or buy back stock. Companies with little cash are one bad quarter away from needing to raise money — which usually means diluting your shares.")
-                        metricRow("Total Debt", km.totalDebt, explainer: "Money the company owes. Zero debt means no interest payments eating profits and no risk of default. High debt is fine IF revenue is growing faster than interest costs. High debt + shrinking revenue = a potential death spiral.")
-                        metricRow("Dividend Yield", km.dividendYield, explainer: "How much cash you get paid each year just for holding. 0% means every dollar of profit goes back into growing the business — common for fast-growing companies. 3%+ is more typical of mature, slower-growing businesses returning cash to shareholders.")
-                    }
-                    // Fallback: existing financials array
-                    if hasFinancials {
-                        ForEach(Array(fin.enumerated()), id: \.offset) { i, row in
-                            HStack {
-                                Text(row[0]).font(.system(size: 13)).foregroundColor(DS.Color.textSecondary)
-                                Spacer()
-                                Text(row[1]).font(DS.Font.mono(13)).foregroundColor(.white)
-                            }
-                            .padding(.horizontal, 13).padding(.vertical, 11)
-                            .background(i % 2 == 0 ? Color.clear : DS.Color.card)
-                        }
-                    }
+                    metricRow("P/E (Trailing)", km.peTrailing, explainer: "How many dollars you're paying for $1 of last year's profit. A typical company trades at 20-25x. Anything above 50x means investors expect earnings to grow several times over before this price makes sense.")
+                    metricRow("P/E (Forward)", km.peForward, explainer: "What you're paying for NEXT year's expected profit. If forward P/E is much lower than trailing, earnings are expected to jump significantly.")
+                    metricRow("EV/EBITDA", km.evEbitda, explainer: "The company's total price tag (including debt) divided by its operating profit. The S&P 500 averages ~15x.")
+                    metricRow("Gross Margin", km.grossMargin, explainer: "For every $100 of sales, how much is left after making the product. Software companies typically run 70-85%.")
+                    metricRow("Operating Margin", km.operatingMargin, explainer: "After paying for the product AND running the business, what % is profit. Above 20% is strong.")
+                    metricRow("Dividend Yield", km.dividendYield, explainer: "How much cash you get paid each year just for holding. 0% is common for fast-growing companies.")
+                    metricRow("Beta", km.beta, explainer: "How much the stock moves vs the market. 1.0 = moves with the S&P 500. Above 1.5 = more volatile.")
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(DS.Color.border, lineWidth: 0.5))
@@ -1242,7 +1344,15 @@ struct DetailSheet: View {
         return AnyView(
             VStack(alignment: .leading, spacing: 12) {
                 Divider().background(DS.Color.border)
-                sectionLabel("UPSIDE ASYMMETRY — TAP FOR DETAILS")
+                HStack(spacing: 6) {
+                    sectionLabel("WHY WE FLAGGED THIS")
+                    Spacer()
+                    Text("TAP ANY ›")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(DS.Color.accent).tracking(0.4)
+                }
+                Text("Six signals scored 0–10. Tap any for the reasoning.")
+                    .font(.system(size: 11.5)).foregroundColor(DS.Color.textMuted)
                 if !hasCoreScores {
                     // No scores populated yet — show pending state
                     HStack(spacing: 8) {

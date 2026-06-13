@@ -85,23 +85,24 @@ final class AuthService: ObservableObject {
 
     #if DEBUG
     func forceDevSession() {
-        currentToken = "dev-skip-token"
-        currentUser = AppUser(id: "dev-user-0001", email: "dev@nofomo.local", subscriptionTier: .pro, apnsToken: nil)
-        isAuthenticated = true
-        Keychain.save("dev-skip-token", key: "auth_token")
-        Keychain.save("dev-user-0001", key: "auth_user_id")
+        signInAnonymously(subscriptionTier: .pro)
+        currentUser = AppUser(
+            id: currentUser?.id ?? "dev-user-0001",
+            email: "dev@nofomo.local",
+            subscriptionTier: .pro,
+            apnsToken: nil
+        )
     }
     #endif
 
-    func signInAnonymously() {
+    func signInAnonymously(subscriptionTier: SubscriptionTier = .free) {
         let existingId = Keychain.load(key: "anon_user_id")
         let userId = existingId ?? UUID().uuidString
-        if existingId == nil {
-            Keychain.save(userId, key: "anon_user_id")
-            Keychain.save("anon", key: "auth_token")
-        }
+        Keychain.delete(key: "auth_user_id")
+        Keychain.save(userId, key: "anon_user_id")
+        Keychain.save("anon", key: "auth_token")
         currentToken = "anon"
-        currentUser = AppUser(id: userId, email: nil, subscriptionTier: .free, apnsToken: nil)
+        currentUser = AppUser(id: userId, email: nil, subscriptionTier: subscriptionTier, apnsToken: nil)
         isAuthenticated = true
     }
 
@@ -112,6 +113,7 @@ final class AuthService: ObservableObject {
         Keychain.delete(key: "auth_token")
         Keychain.delete(key: "auth_user_id")
         Keychain.delete(key: "anon_user_id")
+        UserDefaults.standard.set(false, forKey: "hasSeenNotificationPrimer")
     }
 
     // MARK: - Private
@@ -131,17 +133,21 @@ final class AuthService: ObservableObject {
 
     private func loadStoredSession() {
         guard let token = Keychain.load(key: "auth_token") else { return }
-        if token == "anon" {
-            guard let userId = Keychain.load(key: "anon_user_id") else { return }
-            currentToken = token
-            currentUser = AppUser(id: userId, email: nil, subscriptionTier: .free, apnsToken: nil)
-            isAuthenticated = true
-        } else {
-            guard let userId = Keychain.load(key: "auth_user_id") else { return }
-            currentToken = token
-            currentUser = AppUser(id: userId, email: nil, subscriptionTier: .free, apnsToken: nil)
-            isAuthenticated = true
+        if token == "dev-skip-token" || token == "anon" {
+            signInAnonymously()
+            return
         }
+        guard token.split(separator: ".").count == 3 else {
+            signInAnonymously()
+            return
+        }
+        guard let userId = Keychain.load(key: "auth_user_id") else {
+            signInAnonymously()
+            return
+        }
+        currentToken = token
+        currentUser = AppUser(id: userId, email: nil, subscriptionTier: .free, apnsToken: nil)
+        isAuthenticated = true
     }
 }
 

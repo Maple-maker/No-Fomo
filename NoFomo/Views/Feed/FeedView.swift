@@ -10,6 +10,7 @@ struct FeedView: View {
     @State private var tickerInput = ""
     @State private var showScanner = false
     @State private var showSupplyChain = false
+    @State private var feedMode = "radar"
 
     private let filters: [(id: String, label: String, bolt: Bool)] = [
         ("all", "All", false),
@@ -24,16 +25,25 @@ struct FeedView: View {
             DS.Color.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Scrollable feed
+                if feedMode == "community" {
+                    FeedHeader(
+                        count: 0,
+                        serverOnline: vm.serverOnline,
+                        onScanTap: { showScanner.toggle() },
+                        onSupplyChainTap: { showSupplyChain.toggle() }
+                    )
+                    feedModePicker
+                    CommunityIdeasFeed()
+                } else {
                 ScrollView {
                     VStack(spacing: 0) {
-                        // Header
                         FeedHeader(
                             count: vm.opportunities.count,
                             serverOnline: vm.serverOnline,
                             onScanTap: { showScanner.toggle() },
                             onSupplyChainTap: { showSupplyChain.toggle() }
                         )
+                        feedModePicker
 
                         // Scanner (collapsible)
                         if showScanner { scannerView }
@@ -190,6 +200,7 @@ struct FeedView: View {
                     }
                     .refreshable { await vm.loadFeed(isPremium: isPro) }
                 }
+                }
 
                 // Tab bar spacer
                 Color.clear.frame(height: 22)
@@ -205,6 +216,27 @@ struct FeedView: View {
         .task {
             await vm.loadFeed(isPremium: isPro)
         }
+    }
+
+    private var feedModePicker: some View {
+        HStack(spacing: 0) {
+            ForEach([("radar", "Radar"), ("community", "Community")], id: \.0) { id, label in
+                Button(action: { withAnimation { feedMode = id } }) {
+                    Text(label)
+                        .font(.system(size: 13, weight: feedMode == id ? .semibold : .medium))
+                        .foregroundColor(feedMode == id ? .white : DS.Color.textMuted)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(feedMode == id ? DS.Color.accent.opacity(0.2) : Color.clear)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            }
+        }
+        .padding(4)
+        .background(DS.Color.elevated)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
     }
 
     // MARK: - Scanner view

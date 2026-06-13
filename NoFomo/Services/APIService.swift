@@ -24,11 +24,25 @@ final class APIService {
         let volume: Int?
         let currency: String?
         let signals: RadarSignals?
+        let priceHistory: [Double]?
 
         enum CodingKeys: String, CodingKey {
-            case ticker, tier, score, bluf, price, volume, currency, signals
+            case ticker, tier, score, bluf, price, volume, currency, signals, priceHistory
             case tripleSignal = "triple_signal"
             case changePct = "change_pct"
+        }
+    }
+
+    struct ChartResponse: Codable {
+        let ticker: String
+        let priceHistory: [Double]
+        let price: Double
+        let priceChangePct: Double
+
+        enum CodingKeys: String, CodingKey {
+            case ticker, price
+            case priceHistory = "price_history"
+            case priceChangePct = "price_change_pct"
         }
     }
 
@@ -36,8 +50,39 @@ final class APIService {
         let signals: [String: Bool]?
     }
 
+    /// Minimal decode of Yahoo Finance's /v8/finance/chart payload — only the daily closes.
+    private struct YahooChartResponse: Codable {
+        let chart: Chart
+        struct Chart: Codable { let result: [Result]? }
+        struct Result: Codable { let indicators: Indicators }
+        struct Indicators: Codable { let quote: [Quote] }
+        struct Quote: Codable { let close: [Double?]? }
+    }
+
     private struct ThesisMatchResponse: Codable {
         let matches: [RadarRow]
+    }
+
+    private struct IdeasFeedResponse: Codable {
+        let ideas: [TradeIdea]
+    }
+
+    private struct IdeaPostResponse: Codable {
+        let idea: TradeIdea
+    }
+
+    struct VoteResponse: Codable {
+        let voted: Bool
+        let upvoteCount: Int
+
+        enum CodingKeys: String, CodingKey {
+            case voted
+            case upvoteCount = "upvote_count"
+        }
+    }
+
+    private struct LeaderboardResponse: Codable {
+        let leaderboard: [LeaderboardEntry]
     }
 
     /// Run a thesis against the server's /thesis/match endpoint.
@@ -58,6 +103,46 @@ final class APIService {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return try decoder.decode(ThesisMatchResponse.self, from: data).matches.map { $0.toOpportunity() }
+    }
+
+    /// Fetch price chart history for a ticker (on-demand backfill).
+    func fetchChart(ticker: String) async throws -> ChartResponse {
+        let cleaned = ticker.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            .replacingOccurrences(of: "$", with: "")
+        var components = URLComponents(string: "\(baseURL)/radar/chart")!
+        components.queryItems = [URLQueryItem(name: "ticker", value: cleaned)]
+        let (data, resp) = try await session.data(from: components.url!)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else {
+            throw NSError(domain: "APIService", code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Chart fetch failed"])
+        }
+        return try JSONDecoder().decode(ChartResponse.self, from: data)
+    }
+
+    /// Fetch ~1 year of live daily closing prices straight from Yahoo Finance.
+    ///
+    /// This is the PRIMARY chart source. The radar server's backfill gets HTTP 429'd
+    /// from Vercel's datacenter IPs, but a user's device IP is not rate-limited — so
+    /// pulling closes directly on-device reliably returns daily history.
+    func fetchYahooCloses(ticker: String) async throws -> [Double] {
+        let cleaned = ticker.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            .replacingOccurrences(of: "$", with: "")
+        var components = URLComponents(string: "https://query1.finance.yahoo.com/v8/finance/chart/\(cleaned)")!
+        components.queryItems = [
+            URLQueryItem(name: "range", value: "1y"),
+            URLQueryItem(name: "interval", value: "1d"),
+        ]
+        var req = URLRequest(url: components.url!)
+        // Yahoo rejects requests without a browser-like User-Agent.
+        req.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
+        let (data, resp) = try await session.data(for: req)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else {
+            throw NSError(domain: "APIService", code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Yahoo chart fetch failed"])
+        }
+        let decoded = try JSONDecoder().decode(YahooChartResponse.self, from: data)
+        // Drop the nulls Yahoo emits for market holidays / data gaps.
+        return decoded.chart.result?.first?.indicators.quote.first?.close?.compactMap { $0 } ?? []
     }
 
     /// Scan a ticker via the radar server. Returns an Opportunity.
@@ -117,7 +202,7 @@ final class APIService {
             sources: [],
             upcomingEvents: [],
             tags: signalTags,
-            priceHistory: [],
+            priceHistory: radar.priceHistory ?? [],
             rsiValue: 50,
             rsiSignal: "neutral",
             macdTrend: "neutral",
@@ -153,5 +238,66 @@ final class APIService {
             detectionLane: nil,
             governmentScore: nil
         )
+    }
+
+    func fetchTradeIdeas(limit: Int = 30, offset: Int = 0) async throws -> [TradeIdea] {
+        var components = URLComponents(string: "\(baseURL)/ideas")!
+        components.queryItems = [
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)"),
+        ]
+        let (data, resp) = try await session.data(from: components.url!)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else {
+            throw NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to load ideas"])
+        }
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(IdeasFeedResponse.self, from: data).ideas
+    }
+
+    func fetchLeaderboard() async throws -> [LeaderboardEntry] {
+        let url = URL(string: "\(baseURL)/ideas/leaderboard")!
+        let (data, resp) = try await session.data(from: url)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else {
+            throw NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to load leaderboard"])
+        }
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(LeaderboardResponse.self, from: data).leaderboard
+    }
+
+    func postTradeIdea(ticker: String, body: String, direction: String, targetPrice: Double, timeframeDays: Int, token: String) async throws -> TradeIdea {
+        var req = URLRequest(url: URL(string: "\(baseURL)/ideas")!)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let payload: [String: Any] = [
+            "ticker": ticker,
+            "body": body,
+            "direction": direction,
+            "target_price": targetPrice,
+            "timeframe_days": timeframeDays,
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        let (data, resp) = try await session.data(for: req)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else {
+            throw NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to post idea"])
+        }
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(IdeaPostResponse.self, from: data).idea
+    }
+
+    func voteTradeIdea(id: Int, token: String) async throws -> VoteResponse {
+        var req = URLRequest(url: URL(string: "\(baseURL)/ideas/\(id)/vote")!)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else {
+            throw NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Vote failed"])
+        }
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(VoteResponse.self, from: data)
     }
 }

@@ -88,10 +88,10 @@ export type StructuredOpportunity = {
   competitiveAdvantages?: string
   investmentRisks?: string
   keyMetrics?: {
-    revenue?: string; netIncome?: string; eps?: string
     peTrailing?: string; peForward?: string; evEbitda?: string
-    grossMargin?: string; operatingMargin?: string
-    cashAndEquivalents?: string; totalDebt?: string; dividendYield?: string
+    grossMargin?: string; operatingMargin?: string; dividendYield?: string; beta?: string
+    revenue?: string; netIncome?: string; eps?: string
+    cashAndEquivalents?: string; totalDebt?: string
   }
   redFlags: string[]
   invalidation: string

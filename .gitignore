@@ -12,3 +12,12 @@ dist/
 .cache/
 *.tsbuildinfo
 .DS_Store
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+# Python bytecode
+__pycache__/
+*.pyc
+# Local agent / editor tooling
+.claude/
+.opencode/

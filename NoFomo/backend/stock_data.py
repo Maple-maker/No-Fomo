@@ -102,6 +102,7 @@ def get_snapshot(ticker: str) -> dict:
         "bollinger": bb,
         "avg_volume": avg_vol,
         "vol_vs_avg": round(int(volume.iloc[-1]) / avg_vol, 2) if avg_vol else None,
+        "price_history": [round(float(c), 2) for c in close.tolist()],
     }
 
 

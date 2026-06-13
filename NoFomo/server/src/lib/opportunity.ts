@@ -1,11 +1,32 @@
 import type { StructuredOpportunity, CouncilVerdict, GrokVerdict, CIOArbiter } from '../agents/types'
 
+const RATIO_LABEL_PATTERNS = [
+  /gross\s*margin/i,
+  /operating\s*margin/i,
+  /\bp\/?e\b/i,
+  /ev\/?ebitda/i,
+  /dividend/i,
+  /^beta$/i,
+  /net\s*debt/i,
+]
+
+export function dedupeFinancials(financials: string[][]): string[][] {
+  return (financials ?? []).filter(row => {
+    const label = String(row?.[0] ?? '')
+    return label.length > 0 && !RATIO_LABEL_PATTERNS.some(rx => rx.test(label))
+  })
+}
+
 type RadarRow = {
   ticker: string
   tier: number
   overall_score: number
   thesis: string
   gemini_analysis: string
+  score_breakdown?: unknown
+  reprice_gap?: unknown
+  council_explanation?: unknown
+  regime_flags?: string[]
   data_snapshot: {
     company_name: string
     sector: string
@@ -36,8 +57,7 @@ type RadarRow = {
     key_metrics?: {
       revenue?: string; net_income?: string; eps?: string
       pe_trailing?: string; pe_forward?: string; ev_ebitda?: string
-      gross_margin?: string; operating_margin?: string
-      cash_and_equivalents?: string; total_debt?: string; dividend_yield?: string
+      gross_margin?: string; operating_margin?: string; dividend_yield?: string; beta?: string
     }
     // Insider activity
     insider_total_buys?: number; insider_total_sells?: number
@@ -117,6 +137,7 @@ type RadarRow = {
     asymmetry_open_score?: number       // 0-100; higher = more asymmetry remaining
     asymmetry_decay_reasons?: string[]
     expires_at?: string                 // ISO; auto-prune deadline if not refreshed
+    radar_v2_shadow?: unknown
   }
 }
 
@@ -196,6 +217,11 @@ export function buildRadarRow(
     asymmetryOpenScore?: number
     asymmetryDecayReasons?: string[]
     expiresAt?: string
+    radarV2Shadow?: unknown
+    scoreBreakdown?: unknown
+    repriceGap?: unknown
+    councilExplanation?: unknown
+    regimeFlags?: string[]
   },
 ): RadarRow {
   return {
@@ -204,6 +230,10 @@ export function buildRadarRow(
     overall_score: neutral.score,
     thesis: structured.bluf,
     gemini_analysis: neutral.verdict,
+    score_breakdown: enrichment?.scoreBreakdown,
+    reprice_gap: enrichment?.repriceGap,
+    council_explanation: enrichment?.councilExplanation,
+    regime_flags: enrichment?.regimeFlags,
     data_snapshot: {
       company_name: structured.companyName,
       sector: structured.sector,
@@ -228,7 +258,7 @@ export function buildRadarRow(
       },
       bull_case: structured.bullCase,
       bear_case: structured.bearCase,
-      financials: structured.financials,
+      financials: dedupeFinancials(structured.financials),
       red_flags: structured.redFlags,
       invalidation: structured.invalidation,
       full_report_md: structured.fullReportMd,
@@ -241,17 +271,13 @@ export function buildRadarRow(
       competitive_advantages: structured.competitiveAdvantages || '',
       investment_risks: structured.investmentRisks || '',
       key_metrics: {
-        revenue: structured.keyMetrics?.revenue || '',
-        net_income: structured.keyMetrics?.netIncome || '',
-        eps: structured.keyMetrics?.eps || '',
         pe_trailing: structured.keyMetrics?.peTrailing || '',
         pe_forward: structured.keyMetrics?.peForward || '',
         ev_ebitda: structured.keyMetrics?.evEbitda || '',
         gross_margin: structured.keyMetrics?.grossMargin || '',
         operating_margin: structured.keyMetrics?.operatingMargin || '',
-        cash_and_equivalents: structured.keyMetrics?.cashAndEquivalents || '',
-        total_debt: structured.keyMetrics?.totalDebt || '',
         dividend_yield: structured.keyMetrics?.dividendYield || '',
+        beta: structured.keyMetrics?.beta || '',
       },
       price_history: enrichment?.priceHistory ?? [],
       rsi_value: enrichment?.rsiValue,
@@ -331,6 +357,7 @@ export function buildRadarRow(
       asymmetry_open_score: enrichment?.asymmetryOpenScore,
       asymmetry_decay_reasons: enrichment?.asymmetryDecayReasons,
       expires_at: enrichment?.expiresAt,
+      radar_v2_shadow: enrichment?.radarV2Shadow,
     },
   }
 }
@@ -386,7 +413,7 @@ export function extractJsonBlock(text: string): StructuredOpportunity | null {
       },
       bullCase: parsed.bullCase ?? '',
       bearCase: parsed.bearCase ?? '',
-      financials: parsed.financials ?? [],
+      financials: dedupeFinancials(parsed.financials ?? []),
       redFlags: parsed.redFlags ?? [],
       invalidation: parsed.invalidation ?? '',
       fullReportMd: text,

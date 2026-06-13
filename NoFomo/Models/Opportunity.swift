@@ -143,6 +143,12 @@ struct Opportunity: Identifiable, Codable {
     var confidenceLabel: String?
     var dataFreshness: String?
 
+    // ── Radar V2 signal engine ──
+    var scoreBreakdown: ScoreBreakdown?
+    var repriceGap: RepriceGap?
+    var councilExplanation: CouncilExplanation?
+    var regimeFlags: [String]
+
     // MARK: Memberwise init (for mock data)
     init(id: String, ticker: String, companyName: String, sector: String = "", tier: Int,
          score: Double = 0, tripleSignal: Bool = false, bluf: String,
@@ -177,7 +183,10 @@ struct Opportunity: Identifiable, Codable {
          businessModelSummary: String? = nil, macroContext: String? = nil,
          insiderActivity: String? = nil, governmentSupport: String? = nil,
          indirectCatalysts: String? = nil, overlookedAnalysis: String? = nil,
-         detectionLane: String? = nil, governmentScore: Int? = nil) {
+         detectionLane: String? = nil, governmentScore: Int? = nil,
+         scoreBreakdown: ScoreBreakdown? = nil, repriceGap: RepriceGap? = nil,
+         councilExplanation: CouncilExplanation? = nil, regimeFlags: [String] = [],
+         keyMetrics: KeyMetricsData? = nil) {
         self.id = id; self.ticker = ticker; self.companyName = companyName; self.sector = sector
         self.tier = tier; self.score = score; self.tripleSignal = tripleSignal; self.bluf = bluf
         self.price = price; self.upside = upside; self.marketCap = marketCap; self.probability = probability
@@ -220,6 +229,9 @@ struct Opportunity: Identifiable, Codable {
         self.insiderActivity = insiderActivity; self.governmentSupport = governmentSupport
         self.indirectCatalysts = indirectCatalysts; self.overlookedAnalysis = overlookedAnalysis
         self.detectionLane = detectionLane; self.governmentScore = governmentScore
+        self.scoreBreakdown = scoreBreakdown; self.repriceGap = repriceGap
+        self.councilExplanation = councilExplanation; self.regimeFlags = regimeFlags
+        self.keyMetrics = keyMetrics
     }
 
     // MARK: Custom decoding for Supabase compatibility
@@ -236,9 +248,12 @@ struct Opportunity: Identifiable, Codable {
         isPremium = try c.decodeIfPresent(Bool.self, forKey: .isPremium) ?? false
         publishedAt = try c.decodeIfPresent(Date.self, forKey: .publishedAt) ?? Date()
 
+        let decodedScoreBreakdown = try c.decodeIfPresent(ScoreBreakdown.self, forKey: .scoreBreakdown)
         sector = try c.decodeIfPresent(String.self, forKey: .sector) ?? ""
-        score = try c.decodeIfPresent(Double.self, forKey: .score) ?? c.decodeIfPresent(Double.self, forKey: .overallScore) ?? 0
-        tripleSignal = try c.decodeIfPresent(Bool.self, forKey: .tripleSignal) ?? c.decodeIfPresent(Bool.self, forKey: .isTripleSignal) ?? false
+        let fallbackScore = try c.decodeIfPresent(Double.self, forKey: .score) ?? c.decodeIfPresent(Double.self, forKey: .overallScore) ?? 0
+        let fallbackTripleSignal = try c.decodeIfPresent(Bool.self, forKey: .tripleSignal) ?? c.decodeIfPresent(Bool.self, forKey: .isTripleSignal) ?? false
+        score = decodedScoreBreakdown?.radarScore ?? fallbackScore
+        tripleSignal = decodedScoreBreakdown?.confluence?.tripleSignal ?? fallbackTripleSignal
         price = try c.decodeIfPresent(Double.self, forKey: .price) ?? c.decodeIfPresent(FinancialSnapshot.self, forKey: .snap)?.price ?? 0
         upside = try c.decodeIfPresent(Double.self, forKey: .upside) ?? c.decodeIfPresent(Double.self, forKey: .upsidePct) ?? 0
         marketCap = try c.decodeIfPresent(String.self, forKey: .marketCap) ?? "N/A"
@@ -337,6 +352,10 @@ struct Opportunity: Identifiable, Codable {
         confidenceScore = try c.decodeIfPresent(Int.self, forKey: .confidenceScore)
         confidenceLabel = try c.decodeIfPresent(String.self, forKey: .confidenceLabel)
         dataFreshness = try c.decodeIfPresent(String.self, forKey: .dataFreshness)
+        scoreBreakdown = decodedScoreBreakdown
+        repriceGap = try c.decodeIfPresent(RepriceGap.self, forKey: .repriceGap)
+        councilExplanation = try c.decodeIfPresent(CouncilExplanation.self, forKey: .councilExplanation)
+        regimeFlags = try c.decodeIfPresent([String].self, forKey: .regimeFlags) ?? scoreBreakdown?.regimeFlags ?? []
     }
 
     enum CodingKeys: String, CodingKey {
@@ -443,6 +462,10 @@ struct Opportunity: Identifiable, Codable {
         case confidenceScore = "confidence_score"
         case confidenceLabel = "confidence_label"
         case dataFreshness = "data_freshness"
+        case scoreBreakdown = "score_breakdown"
+        case repriceGap = "reprice_gap"
+        case councilExplanation = "council_explanation"
+        case regimeFlags = "regime_flags"
     }
 }
 
@@ -483,17 +506,130 @@ struct FinancialSnapshot: Codable {
 // MARK: - Key metrics (Qualtrim-style financial summary)
 
 struct KeyMetricsData: Codable {
-    let revenue: String?
-    let netIncome: String?
-    let eps: String?
     let peTrailing: String?
     let peForward: String?
     let evEbitda: String?
     let grossMargin: String?
     let operatingMargin: String?
-    let cashAndEquivalents: String?
-    let totalDebt: String?
     let dividendYield: String?
+    let beta: String?
+
+    enum CodingKeys: String, CodingKey {
+        case peTrailing = "pe_trailing"
+        case peForward = "pe_forward"
+        case evEbitda = "ev_ebitda"
+        case grossMargin = "gross_margin"
+        case operatingMargin = "operating_margin"
+        case dividendYield = "dividend_yield"
+        case beta
+    }
+
+    var hasAnyRatio: Bool {
+        [peTrailing, peForward, evEbitda, grossMargin, operatingMargin, dividendYield, beta]
+            .contains { ($0?.isEmpty == false) && $0 != "N/A" }
+    }
+}
+
+struct ScoreBreakdown: Codable {
+    let ticker: String
+    let radarScore: Double
+    let gatePass: Bool?
+    let categoryScores: [String: Double]
+    let confluence: Confluence?
+    let crowding: Crowding?
+    let signals: [SignalLedgerItem]
+    let regimeFlags: [String]
+    let repriceGap: RepriceGap?
+
+    enum CodingKeys: String, CodingKey {
+        case ticker
+        case radarScore = "radar_score"
+        case gatePass = "gate_pass"
+        case categoryScores = "category_scores"
+        case confluence
+        case crowding
+        case signals
+        case regimeFlags = "regime_flags"
+        case repriceGap = "reprice_gap"
+    }
+
+    struct Confluence: Codable {
+        let k: Int
+        let multiplier: Double
+        let tripleSignal: Bool
+        let categories: [String]?
+
+        enum CodingKeys: String, CodingKey {
+            case k, multiplier, categories
+            case tripleSignal = "triple_signal"
+        }
+    }
+
+    struct Crowding: Codable {
+        let value: Double
+        let penaltyApplied: Double
+
+        enum CodingKeys: String, CodingKey {
+            case value
+            case penaltyApplied = "penalty_applied"
+        }
+    }
+}
+
+struct SignalLedgerItem: Codable, Identifiable {
+    var id: String { "\(type)-\(sourceUrl)" }
+    let type: String
+    let category: String
+    let evidence: String
+    let sourceUrl: String
+    let decayedScore: Double
+    let ageDays: Double
+    let direction: Int
+
+    enum CodingKeys: String, CodingKey {
+        case type, category, evidence, direction
+        case sourceUrl = "source_url"
+        case decayedScore = "decayed_score"
+        case ageDays = "age_days"
+    }
+}
+
+struct RepriceGap: Codable {
+    let expectedDriftRemainingPct: Double?
+    let windowElapsedPct: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case expectedDriftRemainingPct = "expected_drift_remaining_pct"
+        case windowElapsedPct = "window_elapsed_pct"
+    }
+}
+
+struct CouncilExplanation: Codable {
+    let verdict: String?
+    let thesis: String?
+    let reasoningChain: [String]
+    let signalsCited: [String]
+    let signalsChallenged: [ChallengedSignal]
+    let bearCase: String?
+    let invalidationConditions: [String]
+    let whatWouldChangeMyMind: String?
+    let sizingAnnotation: String?
+
+    enum CodingKeys: String, CodingKey {
+        case verdict, thesis
+        case reasoningChain = "reasoning_chain"
+        case signalsCited = "signals_cited"
+        case signalsChallenged = "signals_challenged"
+        case bearCase = "bear_case"
+        case invalidationConditions = "invalidation_conditions"
+        case whatWouldChangeMyMind = "what_would_change_my_mind"
+        case sizingAnnotation = "sizing_annotation"
+    }
+
+    struct ChallengedSignal: Codable {
+        let type: String
+        let objection: String
+    }
 }
 
 // MARK: - Factory

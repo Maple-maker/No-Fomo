@@ -268,11 +268,14 @@ struct OpportunityCard: View {
     }
 
     private var metricsStrip: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 4), spacing: 0) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: opportunity.repriceGap?.expectedDriftRemainingPct == nil ? 4 : 5), spacing: 0) {
             MetricPill(label: "Price", value: "$\(fmtPrice(opportunity.price))")
             MetricPill(label: "Upside", value: "+\(Int(opportunity.upside))%", color: DS.Color.bull)
             MetricPill(label: "Mkt Cap", value: "$\(opportunity.marketCap)")
             MetricPill(label: "Prob", value: "\(Int(opportunity.probability))%", color: DS.Color.accent)
+            if let gap = opportunity.repriceGap?.expectedDriftRemainingPct {
+                MetricPill(label: "Gap", value: "\(gap >= 0 ? "+" : "")\(Int(gap))%", color: DS.Color.tier1)
+            }
         }
         .padding(.vertical, 11)
         .padding(.horizontal, 13)
@@ -308,6 +311,19 @@ struct OpportunityCard: View {
             .padding(.vertical, 6)
             .background(DS.Color.elevated)
             .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        if !opportunity.regimeFlags.isEmpty {
+            HStack(spacing: 6) {
+                ForEach(opportunity.regimeFlags.prefix(3), id: \.self) { flag in
+                    Text(flag.replacingOccurrences(of: "_", with: " "))
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(DS.Color.textSecondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(DS.Color.elevated)
+                        .clipShape(Capsule())
+                }
+            }
         }
     }
 

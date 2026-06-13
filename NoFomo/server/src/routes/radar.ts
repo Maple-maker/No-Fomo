@@ -15,11 +15,27 @@ import type { CouncilVerdict, CIOArbiter } from '../agents/types'
 import { computeSignals } from '../lib/signals'
 import { tagThemes } from '../lib/themes'
 import { getPeerPositioning } from '../lib/peers'
-import { getStockData } from '../lib/stockData'
+import { getStockData, fetchChartPayload, ensureChartHistory, MIN_CHART_FLOOR } from '../lib/stockData'
 import { evaluateAsymmetry } from '../lib/asymmetryDecay'
 import { computeConfidence } from '../lib/confidence'
+import { runRadarV2Shadow } from '../lib/radarV2Shadow'
 
 const router = Router()
+
+router.get('/chart', async (req: Request, res: Response) => {
+  const ticker = String(req.query.ticker || '').toUpperCase().trim()
+  if (!ticker) {
+    res.status(400).json({ error: 'ticker query param required' })
+    return
+  }
+  try {
+    const payload = await fetchChartPayload(ticker)
+    res.json(payload)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    res.status(500).json({ error: message })
+  }
+})
 
 function extractSourcesFromText(text: string): { label: string; url: string }[] {
   const urlRegex = /https?:\/\/[^\s\)\]\"\'<>]+/g
@@ -97,7 +113,7 @@ DOSSIER FORMAT:
 One paragraph investment thesis.
 
 \`\`\`json
-{"ticker":"$TICKER","companyName":"Full Company Name","sector":"Industry","detectionLane":"lane","tier":2,"score":70,"tripleSignal":false,"bluf":"One sentence thesis","price":0,"upside":50,"marketCap":"$XB","probability":60,"catalyst":"catalyst description","buyZones":{"aggressive":0,"base":0,"conservative":0},"bullCase":"bull thesis","bearCase":"bear thesis","financials":[["Revenue","$X"],["Gross Margin","X%"]],"redFlags":["Risk 1","Risk 2"],"invalidation":"What breaks the thesis","competitiveAdvantages":"Full competitive advantages analysis text (3-4 moat pillars with specific numbers)","investmentRisks":"Full investment risks analysis text (3-4 risks ranked by severity with data)","keyMetrics":{"revenue":"$X","netIncome":"$X","eps":"$X.XX","peTrailing":"Xx","peForward":"Xx","evEbitda":"Xx","grossMargin":"X%","operatingMargin":"X%","cashAndEquivalents":"$X","totalDebt":"$X","dividendYield":"X%"}}
+{"ticker":"$TICKER","companyName":"Full Company Name","sector":"Industry","detectionLane":"lane","tier":2,"score":70,"tripleSignal":false,"bluf":"One sentence thesis","price":0,"upside":50,"marketCap":"$XB","probability":60,"catalyst":"catalyst description","buyZones":{"aggressive":0,"base":0,"conservative":0},"bullCase":"bull thesis","bearCase":"bear thesis","financials":[["Revenue (TTM)","$X"],["Net Income","$X"],["EPS","$X.XX"],["FCF","$X"],["Cash","$X"],["Total Debt","$X"]],"redFlags":["Risk 1","Risk 2"],"invalidation":"What breaks the thesis","competitiveAdvantages":"Full competitive advantages analysis text (3-4 moat pillars with specific numbers)","investmentRisks":"Full investment risks analysis text (3-4 risks ranked by severity with data)","keyMetrics":{"peTrailing":"Xx","peForward":"Xx","evEbitda":"Xx","grossMargin":"X%","operatingMargin":"X%","dividendYield":"X%","beta":"X.X"}}
 \`\`\``
 
 router.post('/', async (req: Request, res: Response) => {
@@ -223,6 +239,14 @@ router.post('/', async (req: Request, res: Response) => {
       console.error(`[radar] Enrichment failed for ${ticker}:`, e instanceof Error ? e.message : e)
     }
 
+    if (enrichment && (enrichment.priceHistory?.length ?? 0) < MIN_CHART_FLOOR) {
+      const chart = await ensureChartHistory(ticker)
+      if (chart.closes.length >= MIN_CHART_FLOOR) {
+        enrichment.priceHistory = chart.closes.map(c => Math.round(c * 100) / 100)
+        console.log(`[radar] ${ticker}: patched chart history (${enrichment.priceHistory.length} points)`)
+      }
+    }
+
     // Auto-select council mode based on signal strength
     const modeConfig = selectMode(undefined, { score: structured.score, tier: structured.tier, tripleSignal: structured.tripleSignal })
     // council.ts exposes runCouncil(dossier) → { gemini, deepseek, cio }. Map it onto the
@@ -250,6 +274,17 @@ router.post('/', async (req: Request, res: Response) => {
       councilResult?.neutral.verdict === 'BULL',
       peerPositioning,
     )
+
+    let radarV2Shadow = null
+    try {
+      radarV2Shadow = await runRadarV2Shadow(ticker)
+      const first = radarV2Shadow?.results?.[0]
+      if (first) {
+        console.log(`[radar-v2] shadow ${ticker}: score=${first.radar_score} gate=${first.gate_pass} signals=${first.signals.length}`)
+      }
+    } catch (e) {
+      console.warn('[radar-v2] shadow failed:', e instanceof Error ? e.message : e)
+    }
 
     // ── Asymmetry decay: is the window still open, or has this become consensus? ──
     const asymmetry = evaluateAsymmetry({
@@ -372,12 +407,14 @@ router.post('/', async (req: Request, res: Response) => {
         asymmetryOpenScore: asymmetry.openScore,
         asymmetryDecayReasons: asymmetry.reasons,
         expiresAt: asymmetry.expiresAt,
+        radarV2Shadow,
       } : {
         // Even without enrichment, record the window status.
         windowStatus: asymmetry.status,
         asymmetryOpenScore: asymmetry.openScore,
         asymmetryDecayReasons: asymmetry.reasons,
         expiresAt: asymmetry.expiresAt,
+        radarV2Shadow,
       },
     )
 
@@ -387,10 +424,14 @@ router.post('/', async (req: Request, res: Response) => {
     ;(row as any).data_freshness = dataFreshness
 
     let persisted = false
+    const chartLen = enrichment?.priceHistory?.length ?? 0
+    const chartGateFailed = chartLen < MIN_CHART_FLOOR
     if (!skipPersist && supabase) {
       // Delete existing entries for this ticker (prevents duplicates + prunes if now closed)
       await supabase.from('radar_opportunities').delete().eq('ticker', ticker)
-      if (asymmetry.status === 'closed') {
+      if (chartGateFailed) {
+        console.warn(`[radar] ${ticker}: skipping persist — chart history too short (${chartLen} points)`)
+      } else if (asymmetry.status === 'closed') {
         // Window has closed — do NOT keep a consensus / fully-valued name on the active radar.
         console.log(`[radar] ${ticker} window CLOSED — pruned from active radar: ${asymmetry.reasons.join('; ')}`)
       } else {
@@ -460,6 +501,7 @@ router.post('/', async (req: Request, res: Response) => {
 
       // ── Composite signal score ──
       signals,
+      radarV2Shadow,
 
       // ── Comprehensive enrichment ──
       analyst: enrichment?.analyst || null,

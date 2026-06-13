@@ -209,9 +209,16 @@ struct OnboardingView: View {
                     .font(DS.Font.body(14))
             }
 
+            Button(action: { auth.signInAnonymously() }) {
+                Text("Continue without account")
+                    .font(DS.Font.caption(12))
+                    .foregroundColor(DS.Color.textMuted)
+                    .underline()
+            }
+
             #if DEBUG
             Button(action: { auth.forceDevSession() }) {
-                Text("Skip — Dev Preview")
+                Text("Dev preview (Pro)")
                     .font(DS.Font.caption(11))
                     .foregroundColor(DS.Color.textMuted)
             }

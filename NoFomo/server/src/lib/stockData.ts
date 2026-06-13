@@ -286,8 +286,11 @@ async function fetchQuoteSummary(ticker: string): Promise<YfQuoteModules> {
   }
 }
 
-async function fetchChart(ticker: string): Promise<{ closes: number[]; volumes: number[] }> {
-  const url = `${YF_CHART}/${ticker}?range=1y&interval=1d`
+export const MIN_CHART_POINTS = 60
+export const MIN_CHART_FLOOR = 20
+
+async function fetchChartWithRange(ticker: string, range: string): Promise<{ closes: number[]; volumes: number[] }> {
+  const url = `${YF_CHART}/${ticker}?range=${range}&interval=1d`
   try {
     const data = await fetchJson(url)
     const result = data?.chart?.result?.[0]
@@ -298,8 +301,45 @@ async function fetchChart(ticker: string): Promise<{ closes: number[]; volumes: 
     const volumes = (quotes?.volume || []).filter((v: number | null) => v != null).map(Number)
     return { closes, volumes }
   } catch (err) {
-    console.error(`[stockData] chart failed for ${ticker}:`, err)
+    console.error(`[stockData] chart failed for ${ticker} (${range}):`, err)
     return { closes: [], volumes: [] }
+  }
+}
+
+export async function ensureChartHistory(ticker: string): Promise<{ closes: number[]; volumes: number[] }> {
+  const clean = ticker.toUpperCase().trim()
+  let chart = await fetchChartWithRange(clean, '1y')
+  if (chart.closes.length < MIN_CHART_POINTS) {
+    const retry = await fetchChartWithRange(clean, '2y')
+    if (retry.closes.length > chart.closes.length) chart = retry
+  }
+  if (chart.closes.length < MIN_CHART_FLOOR) {
+    console.warn(`[stockData] ${clean}: chart history short (${chart.closes.length} points)`)
+  }
+  return chart
+}
+
+export async function fetchChartPayload(ticker: string): Promise<{
+  ticker: string
+  price_history: number[]
+  price: number
+  price_change_pct: number
+}> {
+  const clean = ticker.toUpperCase().trim()
+  const chart = await ensureChartHistory(clean)
+  const modules = await fetchQuoteSummary(clean)
+  const price = modules.price?.regularMarketPrice?.raw ?? modules.financialData?.currentPrice?.raw ?? 0
+  const changePct = modules.price?.regularMarketChangePercent?.raw
+    ? Math.round(modules.price.regularMarketChangePercent.raw * 10000) / 100
+    : 0
+  const closes = chart.closes.length > 0
+    ? chart.closes.map(c => Math.round(c * 100) / 100)
+    : (price > 0 ? [price] : [])
+  return {
+    ticker: clean,
+    price_history: closes,
+    price: price || closes[closes.length - 1] || 0,
+    price_change_pct: changePct,
   }
 }
 
@@ -307,7 +347,7 @@ export async function getStockData(ticker: string): Promise<StockDataResult> {
   const clean = ticker.toUpperCase().trim()
   const modules = await fetchQuoteSummary(clean)
   await new Promise(r => setTimeout(r, 1200))
-  const chart = await fetchChart(clean)
+  const chart = await ensureChartHistory(clean)
 
   const price = modules.price
   const detail = modules.summaryDetail
