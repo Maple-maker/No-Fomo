@@ -1363,21 +1363,21 @@ struct DetailSheet: View {
                     .padding(.vertical, 8)
                 } else {
                     HStack(spacing: 0) {
-                        scoreBlock(label: "Asymmetry", score: opportunity.asymmetryScore, color: DS.Color.tier1,
+                        scoreBlock(label: "Asymmetry", score: opportunity.asymmetryScore, color: DS.Color.tier1, rationale: opportunity.asymmetryRationale,
                             detail: "Reward vs Risk\n\nHow lopsided is the upside compared to the downside? A score of 8+ means the potential gain is several times larger than what you could lose. This is the single most important number — it answers 'is this bet worth taking?'\n\n\(opportunity.aiSynopsis.prefix(200))")
-                        scoreBlock(label: "Conviction", score: opportunity.convictionScore, color: DS.Color.bull,
+                        scoreBlock(label: "Conviction", score: opportunity.convictionScore, color: DS.Color.bull, rationale: opportunity.convictionRationale,
                             detail: "Evidence Quality\n\nHow much hard data backs this thesis? A 8+ means multiple primary sources (SEC filings, contracts, insider trades) all point the same way. Below 5 means the story sounds good but lacks proof. The AI council's disagreement level also factors in — more disagreement = lower conviction.\n\nAI Council: \(opportunity.council.gemini == .bull ? "Gemini says buy" : "Gemini says sell"), \(opportunity.council.deepseek == .bull ? "DeepSeek says buy" : "DeepSeek says sell"), \(opportunity.council.cio == .bull ? "CIO says buy" : "CIO says sell")")
-                        scoreBlock(label: "Catalyst", score: opportunity.catalystScore, color: DS.Color.accent,
+                        scoreBlock(label: "Catalyst", score: opportunity.catalystScore, color: DS.Color.accent, rationale: opportunity.catalystRationale,
                             detail: "Catalyst Strength\n\nHow soon and how certain is the event that could reprice this stock? A 8+ means a concrete, dated catalyst within 6 months (FDA decision, earnings inflection, contract award). Below 5 means the thesis is real but the timing is vague — could take years to play out.\n\nKey catalyst: \(opportunity.catalyst)")
-                        scoreBlock(label: "Mgmt", score: opportunity.managementScore, color: DS.Color.tier2,
+                        scoreBlock(label: "Mgmt", score: opportunity.managementScore, color: DS.Color.tier2, rationale: opportunity.managementRationale,
                             detail: "Management Quality\n\nDo the people running this company have a track record of success? Are they aligned with shareholders (own lots of stock)? Do they allocate capital wisely or waste it on empire-building? Founder-led companies with skin in the game typically score higher.\n\nInsider signal: \(opportunity.insiderSignal)")
                     }
                 }
                 // Always show Smart Money + Gov row if either has data, or show it anyway for unscored stocks
                 HStack(spacing: 0) {
-                    scoreBlock(label: "Smart Money", score: sms, color: Color(red: 1.0, green: 0.75, blue: 0.3),
+                    scoreBlock(label: "Smart Money", score: sms, color: Color(red: 1.0, green: 0.75, blue: 0.3), rationale: opportunity.smartMoneySignal,
                         detail: "Smart Money Signal\n\nAre insiders buying? Are top funds accumulating? Congress members trading? This measures whether the people with the best information are betting their own money on this outcome.\n\nInsider buys: \(opportunity.insiderTotalBuys) | Sells: \(opportunity.insiderTotalSells)")
-                    scoreBlock(label: "Gov", score: gs, color: Color(red: 0.5, green: 0.6, blue: 1.0),
+                    scoreBlock(label: "Gov", score: gs, color: Color(red: 0.5, green: 0.6, blue: 1.0), rationale: opportunity.governmentSignal,
                         detail: "Government Support\n\nFederal contracts, grants, regulatory approvals, or policy tailwinds. A 8+ means the government is effectively a customer or partner. Defense, energy, and healthcare companies often score highest here.\n\n\(opportunity.governmentSupport?.prefix(200) ?? "No government data available")")
                 }
             }
@@ -1385,8 +1385,13 @@ struct DetailSheet: View {
         )
     }
 
-    private func scoreBlock(label: String, score: Int, color: Color, detail: String) -> some View {
-        Button(action: { selectedScore = ScoreDetail(scoreKey: label, content: detail) }) {
+    private func scoreBlock(label: String, score: Int, color: Color, rationale: String? = nil, detail: String) -> some View {
+        // Lead with the live CIO rationale when present; fall back to the educational rubric.
+        let content: String = {
+            guard let r = rationale?.trimmingCharacters(in: .whitespacesAndNewlines), !r.isEmpty else { return detail }
+            return "Why this scored \(score)/10:\n\(r)\n\n———\n\(detail)"
+        }()
+        return Button(action: { selectedScore = ScoreDetail(scoreKey: label, content: content) }) {
             VStack(spacing: 4) {
                 Text(label.uppercased())
                     .font(.system(size: 8.5)).foregroundColor(DS.Color.textMuted).tracking(0.4)

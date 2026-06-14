@@ -320,6 +320,12 @@ struct RadarRow: Codable {
         let managementScore: Int?
         let smartMoneyScore: Int?
         let governmentScore: Int?
+        let asymmetryRationale: String?
+        let convictionRationale: String?
+        let catalystRationale: String?
+        let managementRationale: String?
+        let smartMoneySignal: String?
+        let governmentSignal: String?
         let priceHistory: [Double]?
         let scoreBreakdown: ScoreBreakdown?
         let repriceGap: RepriceGap?
@@ -444,7 +450,10 @@ struct RadarRow: Codable {
             detectionLane: dl, governmentScore: gsc,
             scoreBreakdown: v2Score, repriceGap: v2Reprice,
             councilExplanation: v2Council, regimeFlags: v2Flags,
-            keyMetrics: km
+            keyMetrics: km,
+            asymmetryRationale: snap?.asymmetryRationale, convictionRationale: snap?.convictionRationale,
+            catalystRationale: snap?.catalystRationale, managementRationale: snap?.managementRationale,
+            smartMoneySignal: snap?.smartMoneySignal, governmentSignal: snap?.governmentSignal
         )
     }
 
@@ -534,6 +543,12 @@ extension Opportunity {
                 managementScore: managementScore,
                 smartMoneyScore: smartMoneyScore,
                 governmentScore: governmentScore,
+                asymmetryRationale: asymmetryRationale,
+                convictionRationale: convictionRationale,
+                catalystRationale: catalystRationale,
+                managementRationale: managementRationale,
+                smartMoneySignal: smartMoneySignal,
+                governmentSignal: governmentSignal,
                 priceHistory: priceHistory,
                 scoreBreakdown: scoreBreakdown,
                 repriceGap: repriceGap,

@@ -50,6 +50,10 @@ type RadarRow = {
     conviction_score: number
     catalyst_score: number
     management_score: number
+    asymmetry_rationale?: string
+    conviction_rationale?: string
+    catalyst_rationale?: string
+    management_rationale?: string
     analyst_ai_divergence: boolean
     // Qualtrim-style competitive analysis
     competitive_advantages?: string
@@ -262,10 +266,14 @@ export function buildRadarRow(
       red_flags: structured.redFlags,
       invalidation: structured.invalidation,
       full_report_md: structured.fullReportMd,
-      asymmetry_score: neutral.asymmetry ?? 5,
-      conviction_score: neutral.conviction ?? 5,
-      catalyst_score: neutral.catalyst ?? 5,
-      management_score: neutral.management ?? 5,
+      asymmetry_score: neutral.asymmetry ?? 0,
+      conviction_score: neutral.conviction ?? 0,
+      catalyst_score: neutral.catalyst ?? 0,
+      management_score: neutral.management ?? 0,
+      asymmetry_rationale: neutral.asymmetryRationale ?? '',
+      conviction_rationale: neutral.convictionRationale ?? '',
+      catalyst_rationale: neutral.catalystRationale ?? '',
+      management_rationale: neutral.managementRationale ?? '',
       analyst_ai_divergence: false,
       // Qualtrim-style competitive analysis
       competitive_advantages: structured.competitiveAdvantages || '',

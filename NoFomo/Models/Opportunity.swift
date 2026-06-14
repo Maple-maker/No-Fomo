@@ -122,6 +122,14 @@ struct Opportunity: Identifiable, Codable {
     var detectionLane: String?
     var governmentScore: Int?
 
+    // ── Per-dimension CIO rationale + smart-money/gov signal text (surfaced in DetailSheet tap-detail) ──
+    var asymmetryRationale: String?
+    var convictionRationale: String?
+    var catalystRationale: String?
+    var managementRationale: String?
+    var smartMoneySignal: String?
+    var governmentSignal: String?
+
     // ── Restored (additive) fields used by DetailSheet ──
     var councilSummary: String? = nil
     var competitiveAdvantages: String? = nil
@@ -186,7 +194,10 @@ struct Opportunity: Identifiable, Codable {
          detectionLane: String? = nil, governmentScore: Int? = nil,
          scoreBreakdown: ScoreBreakdown? = nil, repriceGap: RepriceGap? = nil,
          councilExplanation: CouncilExplanation? = nil, regimeFlags: [String] = [],
-         keyMetrics: KeyMetricsData? = nil) {
+         keyMetrics: KeyMetricsData? = nil,
+         asymmetryRationale: String? = nil, convictionRationale: String? = nil,
+         catalystRationale: String? = nil, managementRationale: String? = nil,
+         smartMoneySignal: String? = nil, governmentSignal: String? = nil) {
         self.id = id; self.ticker = ticker; self.companyName = companyName; self.sector = sector
         self.tier = tier; self.score = score; self.tripleSignal = tripleSignal; self.bluf = bluf
         self.price = price; self.upside = upside; self.marketCap = marketCap; self.probability = probability
@@ -232,6 +243,9 @@ struct Opportunity: Identifiable, Codable {
         self.scoreBreakdown = scoreBreakdown; self.repriceGap = repriceGap
         self.councilExplanation = councilExplanation; self.regimeFlags = regimeFlags
         self.keyMetrics = keyMetrics
+        self.asymmetryRationale = asymmetryRationale; self.convictionRationale = convictionRationale
+        self.catalystRationale = catalystRationale; self.managementRationale = managementRationale
+        self.smartMoneySignal = smartMoneySignal; self.governmentSignal = governmentSignal
     }
 
     // MARK: Custom decoding for Supabase compatibility
@@ -333,6 +347,12 @@ struct Opportunity: Identifiable, Codable {
         overlookedAnalysis = try c.decodeIfPresent(String.self, forKey: .overlookedAnalysis)
         detectionLane = try c.decodeIfPresent(String.self, forKey: .detectionLane)
         governmentScore = try c.decodeIfPresent(Int.self, forKey: .governmentScore)
+        asymmetryRationale = try c.decodeIfPresent(String.self, forKey: .asymmetryRationale)
+        convictionRationale = try c.decodeIfPresent(String.self, forKey: .convictionRationale)
+        catalystRationale = try c.decodeIfPresent(String.self, forKey: .catalystRationale)
+        managementRationale = try c.decodeIfPresent(String.self, forKey: .managementRationale)
+        smartMoneySignal = try c.decodeIfPresent(String.self, forKey: .smartMoneySignal)
+        governmentSignal = try c.decodeIfPresent(String.self, forKey: .governmentSignal)
         // ── Restored (additive) fields ──
         councilSummary = try c.decodeIfPresent(String.self, forKey: .councilSummary)
         competitiveAdvantages = try c.decodeIfPresent(String.self, forKey: .competitiveAdvantages)
@@ -445,6 +465,12 @@ struct Opportunity: Identifiable, Codable {
         case overlookedAnalysis = "overlooked_analysis"
         case detectionLane = "detection_lane"
         case governmentScore = "government_score"
+        case asymmetryRationale = "asymmetry_rationale"
+        case convictionRationale = "conviction_rationale"
+        case catalystRationale = "catalyst_rationale"
+        case managementRationale = "management_rationale"
+        case smartMoneySignal = "smart_money_signal"
+        case governmentSignal = "government_signal"
         case councilSummary = "council_summary"
         case competitiveAdvantages = "competitive_advantages"
         case investmentRisks = "investment_risks"

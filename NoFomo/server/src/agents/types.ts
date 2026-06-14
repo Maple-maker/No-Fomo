@@ -62,6 +62,13 @@ export type CIOArbiter = {
   catalyst?: number
   management?: number
   minorityView?: string
+  // One-line rationale per dimension
+  asymmetryRationale?: string
+  convictionRationale?: string
+  catalystRationale?: string
+  managementRationale?: string
+  // True when both analysts agreed with similar reasoning — score penalized -10, tripleSignal forced false
+  consensus_risk?: boolean
 }
 
 export type StructuredOpportunity = {

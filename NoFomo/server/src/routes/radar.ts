@@ -319,7 +319,7 @@ router.post('/', async (req: Request, res: Response) => {
       structured,
       councilResult?.bull ?? { verdict: 'BULL', reasoning: '' },
       councilResult?.bear ?? { verdict: 'BEAR', reasoning: '' },
-      councilResult?.neutral ?? { verdict: 'BULL', synthesis: '', tier: structured.tier, score: structured.score, tripleSignal: structured.tripleSignal, asymmetry: 5, conviction: 5, catalyst: 5, management: 5 },
+      councilResult?.neutral ?? { verdict: 'BULL', synthesis: '', tier: structured.tier, score: structured.score, tripleSignal: structured.tripleSignal, asymmetry: 0, conviction: 0, catalyst: 0, management: 0, asymmetryRationale: '', convictionRationale: '', catalystRationale: '', managementRationale: '', consensus_risk: false },
       enrichment ? {
         priceHistory: enrichment.priceHistory,
         rsiValue: enrichment.indicators?.rsi.value,
