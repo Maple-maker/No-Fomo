@@ -1335,11 +1335,18 @@ struct DetailSheet: View {
 
     // MARK: — Upside Potential (lead with this)
     private var upsidePotentialSection: some View {
-        let hasCoreScores = opportunity.asymmetryScore > 0 || opportunity.convictionScore > 0
-            || opportunity.catalystScore > 0 || opportunity.managementScore > 0
+        // Real council scores ALWAYS carry a one-line rationale. Legacy/stale rows store a
+        // flat 5 with NO rationale — treat those as "not scored" so we never display a fake
+        // 5/10. Rationale presence is the only trustworthy "this was really scored" flag.
+        let coreRationales = [opportunity.asymmetryRationale, opportunity.convictionRationale,
+                              opportunity.catalystRationale, opportunity.managementRationale]
+        let hasRealScores = coreRationales.contains { !(($0 ?? "").trimmingCharacters(in: .whitespacesAndNewlines)).isEmpty }
         let sms = opportunity.smartMoneyScore ?? 0
         let gs = opportunity.governmentScore ?? 0
-        let hasExtraScores = sms > 0 || gs > 0
+        // Smart Money / Gov are supplementary: show only on a really-scored card, and only
+        // when the signal is strong enough to be a finding (a lone 2/10 gov is noise).
+        let showSmartMoney = hasRealScores && (sms >= 5 || opportunity.insiderTotalBuys > 0 || opportunity.insiderTotalSells > 0)
+        let showGov = hasRealScores && gs >= 5
 
         return AnyView(
             VStack(alignment: .leading, spacing: 12) {
@@ -1347,17 +1354,21 @@ struct DetailSheet: View {
                 HStack(spacing: 6) {
                     sectionLabel("WHY WE FLAGGED THIS")
                     Spacer()
-                    Text("TAP ANY ›")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(DS.Color.accent).tracking(0.4)
+                    if hasRealScores {
+                        Text("TAP ANY ›")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(DS.Color.accent).tracking(0.4)
+                    }
                 }
-                Text("Six signals scored 0–10. Tap any for the reasoning.")
-                    .font(.system(size: 11.5)).foregroundColor(DS.Color.textMuted)
-                if !hasCoreScores {
-                    // No scores populated yet — show pending state
+                if hasRealScores {
+                    Text("Tap any signal to expand the reasoning.")
+                        .font(.system(size: 11.5)).foregroundColor(DS.Color.textMuted)
+                }
+                if !hasRealScores {
+                    // No real council scores on this row — honest pending state, never a fake 5/10.
                     HStack(spacing: 8) {
                         Image(systemName: "hourglass").font(.system(size: 11)).foregroundColor(DS.Color.textMuted)
-                        Text("Scores pending — radar analysis in progress")
+                        Text("Scores pending — awaiting fresh radar analysis")
                             .font(.system(size: 12)).foregroundColor(DS.Color.textMuted)
                     }
                     .padding(.vertical, 8)
@@ -1373,48 +1384,103 @@ struct DetailSheet: View {
                             detail: "Management Quality\n\nDo the people running this company have a track record of success? Are they aligned with shareholders (own lots of stock)? Do they allocate capital wisely or waste it on empire-building? Founder-led companies with skin in the game typically score higher.\n\nInsider signal: \(opportunity.insiderSignal)")
                     }
                 }
-                // Always show Smart Money + Gov row if either has data, or show it anyway for unscored stocks
-                HStack(spacing: 0) {
-                    scoreBlock(label: "Smart Money", score: sms, color: Color(red: 1.0, green: 0.75, blue: 0.3), rationale: opportunity.smartMoneySignal,
-                        detail: "Smart Money Signal\n\nAre insiders buying? Are top funds accumulating? Congress members trading? This measures whether the people with the best information are betting their own money on this outcome.\n\nInsider buys: \(opportunity.insiderTotalBuys) | Sells: \(opportunity.insiderTotalSells)")
-                    scoreBlock(label: "Gov", score: gs, color: Color(red: 0.5, green: 0.6, blue: 1.0), rationale: opportunity.governmentSignal,
-                        detail: "Government Support\n\nFederal contracts, grants, regulatory approvals, or policy tailwinds. A 8+ means the government is effectively a customer or partner. Defense, energy, and healthcare companies often score highest here.\n\n\(opportunity.governmentSupport?.prefix(200) ?? "No government data available")")
+                // Smart Money / Gov — render a card only when it has an actual move/signal
+                if showSmartMoney || showGov {
+                    HStack(spacing: 0) {
+                        if showSmartMoney {
+                            scoreBlock(label: "Smart Money", score: sms, color: Color(red: 1.0, green: 0.75, blue: 0.3), rationale: opportunity.smartMoneySignal,
+                                detail: "Smart Money Signal\n\nAre insiders buying? Are top funds accumulating? Congress members trading? This measures whether the people with the best information are betting their own money on this outcome.\n\nInsider buys: \(opportunity.insiderTotalBuys) | Sells: \(opportunity.insiderTotalSells)")
+                        }
+                        if showGov {
+                            scoreBlock(label: "Gov", score: gs, color: Color(red: 0.5, green: 0.6, blue: 1.0), rationale: opportunity.governmentSignal,
+                                detail: "Government Support\n\nFederal contracts, grants, regulatory approvals, or policy tailwinds. A 8+ means the government is effectively a customer or partner. Defense, energy, and healthcare companies often score highest here.\n\n\(opportunity.governmentSupport?.prefix(200) ?? "No government data available")")
+                        }
+                    }
+                }
+                // Inline reasoning for the tapped signal (replaces the old per-card modal that 6 cards fought over)
+                if let sel = selectedScore {
+                    scoreRationalePanel(sel)
                 }
             }
             .padding(.horizontal, 20).padding(.top, 16)
         )
     }
 
+    // A single tappable signal card. Tapping toggles the inline reasoning panel
+    // below the grid (see upsidePotentialSection) — no modal, so the 6 cards no
+    // longer fight over one .sheet binding (the old bug that made taps do nothing).
     private func scoreBlock(label: String, score: Int, color: Color, rationale: String? = nil, detail: String) -> some View {
-        // Lead with the live CIO rationale when present; fall back to the educational rubric.
         let content: String = {
             guard let r = rationale?.trimmingCharacters(in: .whitespacesAndNewlines), !r.isEmpty else { return detail }
             return "Why this scored \(score)/10:\n\(r)\n\n———\n\(detail)"
         }()
-        return Button(action: { selectedScore = ScoreDetail(scoreKey: label, content: content) }) {
+        let isSelected = selectedScore?.scoreKey == label
+        let unscored = score <= 0
+        return Button(action: {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedScore = isSelected ? nil : ScoreDetail(scoreKey: label, content: content)
+            }
+        }) {
             VStack(spacing: 4) {
                 Text(label.uppercased())
                     .font(.system(size: 8.5)).foregroundColor(DS.Color.textMuted).tracking(0.4)
-                Text("\(score)/10")
-                    .font(DS.Font.mono(16)).foregroundColor(color)
+                Text(unscored ? "—" : "\(score)/10")
+                    .font(DS.Font.mono(16)).foregroundColor(unscored ? DS.Color.textMuted : color)
                 GeometryReader { geo in
                     Capsule()
                         .fill(color.opacity(0.15))
                         .overlay(alignment: .leading) {
                             Capsule()
                                 .fill(color)
-                                .frame(width: geo.size.width * CGFloat(score) / 10)
+                                .frame(width: geo.size.width * CGFloat(max(0, score)) / 10)
                         }
                 }
                 .frame(height: 3)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10).padding(.horizontal, 6)
-            .background(DS.Color.card)
+            .background(isSelected ? color.opacity(0.14) : DS.Color.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(isSelected ? color.opacity(0.65) : Color.clear, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 6))
         }
         .buttonStyle(.plain)
-        .sheet(item: $selectedScore) { detail in
-            ScoreDetailView(detail: detail)
+    }
+
+    // Inline reasoning panel shown below the signal grid for the tapped card.
+    private func scoreRationalePanel(_ detail: ScoreDetail) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(colorForScoreKey(detail.scoreKey))
+                .frame(width: 3)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(detail.scoreKey.uppercased())
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(colorForScoreKey(detail.scoreKey)).tracking(0.5)
+                Text(detail.content)
+                    .font(.system(size: 12.5)).foregroundColor(DS.Color.textSecondary)
+                    .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.Color.card.opacity(0.6))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    private func colorForScoreKey(_ key: String) -> Color {
+        switch key {
+        case "Asymmetry": return DS.Color.tier1
+        case "Conviction": return DS.Color.bull
+        case "Catalyst": return DS.Color.accent
+        case "Mgmt": return DS.Color.tier2
+        case "Smart Money": return Color(red: 1.0, green: 0.75, blue: 0.3)
+        case "Gov": return Color(red: 0.5, green: 0.6, blue: 1.0)
+        default: return DS.Color.textSecondary
         }
     }
 
