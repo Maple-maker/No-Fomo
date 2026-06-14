@@ -20,7 +20,7 @@ async function fetchSocialMentions(ticker: string, freshness: 'pw' | 'pm'): Prom
   if (!braveKey) return []
   const query = `$${ticker} stock (site:reddit.com OR site:stocktwits.com)`
   const res = await fetch(
-    `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=50&freshness=${freshness}`,
+    `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=20&freshness=${freshness}`,
     { headers: { Accept: 'application/json', 'X-Subscription-Token': braveKey }, signal: AbortSignal.timeout(9000) },
   )
   if (!res.ok) throw new Error(`Brave HTTP ${res.status}`)

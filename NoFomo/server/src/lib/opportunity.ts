@@ -1,4 +1,5 @@
 import type { StructuredOpportunity, CouncilVerdict, GrokVerdict, CIOArbiter } from '../agents/types'
+import type { PeerCompany } from './peers'
 
 const RATIO_LABEL_PATTERNS = [
   /gross\s*margin/i,
@@ -92,6 +93,7 @@ type RadarRow = {
     tags?: string[]
     peer_percentile_rank?: number
     peer_verdict?: string
+    peer_comparison?: PeerCompany[]
     contrarian_score?: number
     smart_money_score?: number
     government_score?: number
@@ -172,6 +174,7 @@ export function buildRadarRow(
     tags?: string[]
     peerPercentileRank?: number
     peerVerdict?: string
+    peerComparison?: PeerCompany[]
     contrarian?: number
     smartMoneyScore?: number
     governmentScore?: number
@@ -320,6 +323,7 @@ export function buildRadarRow(
       tags: enrichment?.tags ?? [],
       peer_percentile_rank: enrichment?.peerPercentileRank,
       peer_verdict: enrichment?.peerVerdict,
+      peer_comparison: enrichment?.peerComparison,
       contrarian_score: enrichment?.contrarian,
       smart_money_score: enrichment?.smartMoneyScore,
       government_score: enrichment?.governmentScore,

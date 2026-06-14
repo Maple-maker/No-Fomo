@@ -12,11 +12,22 @@ export interface PeerMetrics {
   pegScore: { ticker: number | null; median: number | null; rank: number }
 }
 
+// One row of the head-to-head comparison table (target first, then peers).
+export interface PeerCompany {
+  ticker: string
+  isTarget: boolean
+  psTtm: number | null
+  evEbitda: number | null
+  grossMargin: number | null
+  revGrowth: number | null
+}
+
 export interface PeerPositioning {
   peers: string[]
   percentileRank: number
   metrics: PeerMetrics
   verdict: 'cheap_growth' | 'fair' | 'expensive' | 'value_trap'
+  table: PeerCompany[]
 }
 
 const PEER_GROUPS: Record<string, string[]> = {
@@ -80,9 +91,24 @@ export async function getPeerPositioning(
     else if (percentileRank > 70 && (targetData.rev_growth_yoy || 0) < (revGrowthMedian || 0)) verdict = 'value_trap'
     else if (percentileRank > 70) verdict = 'expensive'
 
+    // Head-to-head table: target first, then each peer (preserving order + nulls).
+    const toRow = (tk: string, d: Partial<StockDataResult> | null, isTarget: boolean): PeerCompany => ({
+      ticker: tk,
+      isTarget,
+      psTtm: d?.ps_ttm ?? null,
+      evEbitda: d?.ev_ebitda ?? null,
+      grossMargin: d?.gross_margin ?? null,
+      revGrowth: d?.rev_growth_yoy ?? null,
+    })
+    const table: PeerCompany[] = [
+      toRow(t, targetData, true),
+      ...peersToFetch.map((p, i) => toRow(p, peerResults[i], false)),
+    ]
+
     return {
       peers: peersToFetch,
       percentileRank,
+      table,
       metrics: {
         psTtm: { ticker: targetData.ps_ttm || null, median: psTtmMedian, rank: computeRank(targetData.ps_ttm, psTtms) },
         psForward: { ticker: targetData.ps_ttm || null, median: psTtmMedian, rank: computeRank(targetData.ps_ttm, psTtms) },

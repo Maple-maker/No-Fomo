@@ -358,6 +358,7 @@ router.post('/', async (req: Request, res: Response) => {
         tags: enrichment.tags,
         peerPercentileRank: peerPositioning?.percentileRank,
         peerVerdict: peerPositioning?.verdict,
+        peerComparison: peerPositioning?.table,
         contrarian: signals.contrarian,
         smartMoneyScore: Math.round(signals.smartMoney / 10),        // 0–100 → 1–10
         governmentScore: Math.round(signals.government / 10),        // 0–100 → 1–10
@@ -418,10 +419,12 @@ router.post('/', async (req: Request, res: Response) => {
       },
     )
 
-    // Add confidence fields to the persisted row
-    ;(row as any).confidence_score = confidence.score
-    ;(row as any).confidence_label = confidence.label
-    ;(row as any).data_freshness = dataFreshness
+    // Persist confidence into the data_snapshot jsonb — these are NOT top-level
+    // columns on radar_opportunities, so writing them at the top level makes the
+    // entire insert fail ("Could not find the 'confidence_label' column").
+    ;(row.data_snapshot as any).confidence_score = confidence.score
+    ;(row.data_snapshot as any).confidence_label = confidence.label
+    ;(row.data_snapshot as any).data_freshness = dataFreshness
 
     let persisted = false
     const chartLen = enrichment?.priceHistory?.length ?? 0
