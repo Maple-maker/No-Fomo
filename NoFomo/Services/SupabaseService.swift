@@ -21,10 +21,10 @@ final class SupabaseService {
         session = URLSession(configuration: config)
     }
 
-    // MARK: - Feed (reads from radar_opportunities table)
+    // MARK: - Feed (reads from radar_feed_public view — readable by anon, contains all fields)
 
     func fetchFeed(isPremium: Bool, limit: Int = 20, offset: Int = 0) async throws -> [Opportunity] {
-        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/radar_opportunities"), resolvingAgainstBaseURL: false)!
+        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/radar_feed_public"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "select", value: "*"),
             URLQueryItem(name: "order", value: "created_at.desc"),
@@ -51,7 +51,7 @@ final class SupabaseService {
     }
 
     func fetchOpportunity(id: Int) async throws -> Opportunity {
-        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/radar_opportunities"), resolvingAgainstBaseURL: false)!
+        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/radar_feed_public"), resolvingAgainstBaseURL: false)!
         components.queryItems = [URLQueryItem(name: "id", value: "eq.\(id)")]
         var req = URLRequest(url: components.url!)
         req.addPublicHeaders()
@@ -331,6 +331,12 @@ struct RadarRow: Codable {
         let repriceGap: RepriceGap?
         let councilExplanation: CouncilExplanation?
         let regimeFlags: [String]?
+        // ── Valuation + Wall-Street (Phase 0) ──
+        let valuation: Valuation?
+        let wallStreet: WallStreet?
+        let peerComparison: [PeerCompany]?
+        let peerPercentileRank: Int?
+        let peerVerdict: String?
     }
 
     struct CouncilData: Codable {
@@ -453,7 +459,10 @@ struct RadarRow: Codable {
             keyMetrics: km,
             asymmetryRationale: snap?.asymmetryRationale, convictionRationale: snap?.convictionRationale,
             catalystRationale: snap?.catalystRationale, managementRationale: snap?.managementRationale,
-            smartMoneySignal: snap?.smartMoneySignal, governmentSignal: snap?.governmentSignal
+            smartMoneySignal: snap?.smartMoneySignal, governmentSignal: snap?.governmentSignal,
+            valuation: snap?.valuation, wallStreet: snap?.wallStreet,
+            peerComparison: snap?.peerComparison, peerPercentileRank: snap?.peerPercentileRank,
+            peerVerdict: snap?.peerVerdict
         )
     }
 
@@ -553,7 +562,12 @@ extension Opportunity {
                 scoreBreakdown: scoreBreakdown,
                 repriceGap: repriceGap,
                 councilExplanation: councilExplanation,
-                regimeFlags: regimeFlags
+                regimeFlags: regimeFlags,
+                valuation: valuation,
+                wallStreet: wallStreet,
+                peerComparison: peerComparison,
+                peerPercentileRank: peerPercentileRank,
+                peerVerdict: peerVerdict
             )
         )
     }

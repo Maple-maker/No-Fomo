@@ -1,6 +1,8 @@
 import { Router, type Request, type Response } from 'express'
 import { getDeepSeekClient, callClaude, callGemini, getDeepSeekModel } from '../agents/client'
-import type { CouncilVerdict, CIOArbiter } from '../agents/types'
+import type { CouncilVerdict, CIOArbiter, WallStreetAnalysis } from '../agents/types'
+import type { ValuationSnapshot } from '../lib/opportunity'
+import { parseJsonBlock } from '../lib/opportunity'
 
 const router = Router()
 
@@ -224,6 +226,99 @@ export function parseCIO(text: string): CIOArbiter {
   }
 
   return { verdict: 'BULL', synthesis: text.slice(0, 500), tier: 2, score: 0, tripleSignal: false }
+}
+
+// ── Wall Street Analyst ──────────────────────────────────────────────────────
+// Reads the same dossier as the CIO (independence — no anchoring on CIO output).
+// Scores MOAT, UPSIDE, MARKET CONDITIONS, COMP ADVANTAGE each 1-10.
+// Inherits CIO_MODEL override → no new model cost.
+
+const WALL_STREET_PROMPT = `You are a sharp sell-side equity analyst producing institutional-grade research. Your job: read a radar dossier and score the opportunity on four dimensions, then write a one-paragraph investment thesis.
+
+## Scoring Dimensions (each 1-10, integer, grounded in the provided valuation numbers)
+- **moatScore**: Durability of competitive moat. 10 = sole-source contracts, proprietary data flywheel, or switching costs rivals cannot replicate in 3-5y. 1 = fully commoditized with no differentiation.
+- **upsideScore**: Conviction on upside potential, calibrated to the valuation. 10 = DCF intrinsic >50% above price with multiple confirming signals. 1 = fully priced or negative FCF.
+- **marketConditionScore**: Favorability of the current macro/sector backdrop. 10 = strong tailwinds, expanding multiples, sector in discovery phase. 1 = severe headwinds, multiple compression.
+- **compAdvScore**: Competitive advantage vs. direct peers. 10 = dominant market share, best-in-class margins, pricing power. 1 = losing share, margin below peers.
+
+## Rules
+- Ground every score in the specific numbers in the dossier and valuation block — cite actual figures (P/S, DCF upside %, peer percentile) in your rationales.
+- Each rationale is one crisp sentence. No hedge words. Call it as you see it.
+- thesis: one paragraph synthesizing the investment case — lead with the valuation anchor, name the catalyst, acknowledge the bear case.
+- Output ONLY valid JSON. No markdown, no preamble, no trailing text.
+- Output keys exactly: moatScore, upsideScore, marketConditionScore, compAdvScore, moatRationale, upsideRationale, marketConditionRationale, compAdvRationale, thesis.`
+
+/** Clamp a score to integer 1-10; return 0 (fallback sentinel) if value is not a valid number. */
+function clampWsScore(v: unknown): number {
+  if (typeof v !== 'number' || !isFinite(v)) return 0
+  return Math.min(10, Math.max(1, Math.round(v)))
+}
+
+/** Parse the Wall Street analyst's JSON output, clamping scores and falling back on parse failure. */
+export function parseWallStreet(text: string): WallStreetAnalysis {
+  const fallback: WallStreetAnalysis = {
+    moatScore: 0, upsideScore: 0, marketConditionScore: 0, compAdvScore: 0,
+    moatRationale: '', upsideRationale: '', marketConditionRationale: '', compAdvRationale: '',
+    thesis: '',
+  }
+
+  try {
+    const parsed = parseJsonBlock(text)
+    if (!parsed) return fallback
+    return {
+      moatScore:             clampWsScore(parsed.moatScore),
+      upsideScore:           clampWsScore(parsed.upsideScore),
+      marketConditionScore:  clampWsScore(parsed.marketConditionScore),
+      compAdvScore:          clampWsScore(parsed.compAdvScore),
+      moatRationale:         typeof parsed.moatRationale === 'string'            ? parsed.moatRationale            : '',
+      upsideRationale:       typeof parsed.upsideRationale === 'string'          ? parsed.upsideRationale          : '',
+      marketConditionRationale: typeof parsed.marketConditionRationale === 'string' ? parsed.marketConditionRationale : '',
+      compAdvRationale:      typeof parsed.compAdvRationale === 'string'          ? parsed.compAdvRationale          : '',
+      thesis:                typeof parsed.thesis === 'string'                   ? parsed.thesis                   : '',
+    }
+  } catch {
+    return fallback
+  }
+}
+
+/**
+ * Run the Wall Street analyst on the same dossier the CIO reads.
+ * Optionally appends a compact valuation block so the analyst can ground scores in real numbers.
+ * Independence: reads the dossier DIRECTLY — does NOT see the CIO's output.
+ */
+export async function runWallStreet(
+  dossier: string,
+  valuation: ValuationSnapshot | null,
+): Promise<WallStreetAnalysis> {
+  const truncatedDossier = dossier.slice(0, 12000)
+
+  // Compact valuation summary — gives the analyst numbers to anchor scores to
+  const valuationBlock = valuation ? `
+
+## Valuation Summary (for score grounding)
+DCF: ${valuation.dcf ? `intrinsic $${valuation.dcf.intrinsic.toFixed(2)}, upside ${valuation.dcf.upsidePct.toFixed(1)}%, verdict ${valuation.dcf.verdict}, buyBelow $${valuation.dcf.buyBelow.toFixed(2)}` : 'N/A (negative FCF or missing data)'}
+vs Peers: ${valuation.relative.vs_peers ? `${valuation.relative.vs_peers.percentile}th percentile, verdict: ${valuation.relative.vs_peers.verdict}` : 'N/A'}
+vs Sector: ${valuation.relative.vs_sector ? `${valuation.relative.vs_sector.percentile}th percentile, sector median P/S ${valuation.relative.vs_sector.medianPs.toFixed(1)}x, EV/EBITDA ${valuation.relative.vs_sector.medianEvEbitda.toFixed(1)}x` : 'N/A'}
+vs Market: ${valuation.relative.vs_market ? `${valuation.relative.vs_market.percentile}th percentile, broad market median P/E ${valuation.relative.vs_market.medianPe.toFixed(1)}x` : 'N/A'}
+Composite: ${valuation.composite_verdict}` : ''
+
+  const userPrompt = `Here is the radar research dossier:
+
+${truncatedDossier}${valuationBlock}
+
+Deliver your Wall Street analyst verdict as JSON with keys: moatScore, upsideScore, marketConditionScore, compAdvScore, moatRationale, upsideRationale, marketConditionRationale, compAdvRationale, thesis.`
+
+  try {
+    const raw = await callClaude(WALL_STREET_PROMPT, userPrompt)
+    return parseWallStreet(raw)
+  } catch (e) {
+    console.error('[council] runWallStreet error:', e instanceof Error ? e.message : e)
+    return {
+      moatScore: 0, upsideScore: 0, marketConditionScore: 0, compAdvScore: 0,
+      moatRationale: '', upsideRationale: '', marketConditionRationale: '', compAdvRationale: '',
+      thesis: '',
+    }
+  }
 }
 
 export default router

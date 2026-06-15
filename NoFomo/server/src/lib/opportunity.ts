@@ -1,6 +1,43 @@
 import type { StructuredOpportunity, CouncilVerdict, GrokVerdict, CIOArbiter } from '../agents/types'
 import type { PeerCompany } from './peers'
 
+// ── data_snapshot field contract: Valuation + Wall-Street analysis ──
+// Frozen shape that backend (WP-D) populates and iOS (WP-E) decodes.
+// All fields null-safe — a thin-data run leaves these undefined/null, never fabricated.
+export interface ValuationSnapshot {
+  // Intrinsic value from discounted cash flow (server/src/lib/dcfValuation.ts runDCF).
+  dcf: {
+    intrinsic: number
+    upsidePct: number
+    verdict: 'undervalued' | 'fairly_valued' | 'overvalued'
+    buyBelow: number
+    bear: number
+    base: number
+    bull: number
+    growthUsed: number
+  } | null
+  // Relative value: how the multiple stacks up vs direct peers, sector, and the broad market.
+  relative: {
+    vs_peers: { percentile: number; verdict: string } | null   // from peers.ts getPeerPositioning
+    vs_sector: { percentile: number; medianPs: number; medianEvEbitda: number } | null
+    vs_market: { percentile: number; medianPe: number } | null
+  }
+  composite_verdict: 'undervalued' | 'fair' | 'overvalued'
+}
+
+export interface WallStreetSnapshot {
+  // LLM "Wall Street analyst" take — each score 1-10, grounded in the valuation numbers above.
+  moat_score: number
+  upside_score: number
+  market_condition_score: number
+  comp_adv_score: number
+  moat_rationale: string
+  upside_rationale: string
+  market_condition_rationale: string
+  comp_adv_rationale: string
+  thesis: string   // one-paragraph synthesis
+}
+
 const RATIO_LABEL_PATTERNS = [
   /gross\s*margin/i,
   /operating\s*margin/i,
@@ -94,6 +131,9 @@ type RadarRow = {
     peer_percentile_rank?: number
     peer_verdict?: string
     peer_comparison?: PeerCompany[]
+    // ── Valuation (DCF + relative) + Wall-Street analysis · WP-D populates ──
+    valuation?: ValuationSnapshot
+    wall_street?: WallStreetSnapshot
     contrarian_score?: number
     smart_money_score?: number
     government_score?: number
@@ -175,6 +215,8 @@ export function buildRadarRow(
     peerPercentileRank?: number
     peerVerdict?: string
     peerComparison?: PeerCompany[]
+    valuation?: ValuationSnapshot
+    wallStreet?: WallStreetSnapshot
     contrarian?: number
     smartMoneyScore?: number
     governmentScore?: number
@@ -324,6 +366,8 @@ export function buildRadarRow(
       peer_percentile_rank: enrichment?.peerPercentileRank,
       peer_verdict: enrichment?.peerVerdict,
       peer_comparison: enrichment?.peerComparison,
+      valuation: enrichment?.valuation,
+      wall_street: enrichment?.wallStreet,
       contrarian_score: enrichment?.contrarian,
       smart_money_score: enrichment?.smartMoneyScore,
       government_score: enrichment?.governmentScore,

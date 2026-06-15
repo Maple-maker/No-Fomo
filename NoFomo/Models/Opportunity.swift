@@ -157,6 +157,13 @@ struct Opportunity: Identifiable, Codable {
     var councilExplanation: CouncilExplanation?
     var regimeFlags: [String]
 
+    // ── Valuation + Wall-Street analysis (WP-D Phase 0) ──
+    var valuation: Valuation?
+    var wallStreet: WallStreet?
+    var peerComparison: [PeerCompany]?
+    var peerPercentileRank: Int?
+    var peerVerdict: String?
+
     // MARK: Memberwise init (for mock data)
     init(id: String, ticker: String, companyName: String, sector: String = "", tier: Int,
          score: Double = 0, tripleSignal: Bool = false, bluf: String,
@@ -197,7 +204,10 @@ struct Opportunity: Identifiable, Codable {
          keyMetrics: KeyMetricsData? = nil,
          asymmetryRationale: String? = nil, convictionRationale: String? = nil,
          catalystRationale: String? = nil, managementRationale: String? = nil,
-         smartMoneySignal: String? = nil, governmentSignal: String? = nil) {
+         smartMoneySignal: String? = nil, governmentSignal: String? = nil,
+         valuation: Valuation? = nil, wallStreet: WallStreet? = nil,
+         peerComparison: [PeerCompany]? = nil, peerPercentileRank: Int? = nil,
+         peerVerdict: String? = nil) {
         self.id = id; self.ticker = ticker; self.companyName = companyName; self.sector = sector
         self.tier = tier; self.score = score; self.tripleSignal = tripleSignal; self.bluf = bluf
         self.price = price; self.upside = upside; self.marketCap = marketCap; self.probability = probability
@@ -246,6 +256,9 @@ struct Opportunity: Identifiable, Codable {
         self.asymmetryRationale = asymmetryRationale; self.convictionRationale = convictionRationale
         self.catalystRationale = catalystRationale; self.managementRationale = managementRationale
         self.smartMoneySignal = smartMoneySignal; self.governmentSignal = governmentSignal
+        self.valuation = valuation; self.wallStreet = wallStreet
+        self.peerComparison = peerComparison; self.peerPercentileRank = peerPercentileRank
+        self.peerVerdict = peerVerdict
     }
 
     // MARK: Custom decoding for Supabase compatibility
@@ -376,6 +389,11 @@ struct Opportunity: Identifiable, Codable {
         repriceGap = try c.decodeIfPresent(RepriceGap.self, forKey: .repriceGap)
         councilExplanation = try c.decodeIfPresent(CouncilExplanation.self, forKey: .councilExplanation)
         regimeFlags = try c.decodeIfPresent([String].self, forKey: .regimeFlags) ?? scoreBreakdown?.regimeFlags ?? []
+        valuation = try c.decodeIfPresent(Valuation.self, forKey: .valuation)
+        wallStreet = try c.decodeIfPresent(WallStreet.self, forKey: .wallStreet)
+        peerComparison = try c.decodeIfPresent([PeerCompany].self, forKey: .peerComparison)
+        peerPercentileRank = try c.decodeIfPresent(Int.self, forKey: .peerPercentileRank)
+        peerVerdict = try c.decodeIfPresent(String.self, forKey: .peerVerdict)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -492,6 +510,11 @@ struct Opportunity: Identifiable, Codable {
         case repriceGap = "reprice_gap"
         case councilExplanation = "council_explanation"
         case regimeFlags = "regime_flags"
+        case valuation
+        case wallStreet = "wall_street"
+        case peerComparison = "peer_comparison"
+        case peerPercentileRank = "peer_percentile_rank"
+        case peerVerdict = "peer_verdict"
     }
 }
 
@@ -655,6 +678,126 @@ struct CouncilExplanation: Codable {
     struct ChallengedSignal: Codable {
         let type: String
         let objection: String
+    }
+}
+
+// MARK: - Valuation (mirrors ValuationSnapshot from data_snapshot)
+
+struct Valuation: Codable {
+    let dcf: DCF?
+    let relative: Relative?
+    let compositeVerdict: String?
+
+    enum CodingKeys: String, CodingKey {
+        case dcf
+        case relative
+        case compositeVerdict = "composite_verdict"
+    }
+
+    struct DCF: Codable {
+        let intrinsic: Double?
+        let upsidePct: Double?
+        let verdict: String?
+        let buyBelow: Double?
+        let bear: Double?
+        let base: Double?
+        let bull: Double?
+        let growthUsed: Double?
+
+        enum CodingKeys: String, CodingKey {
+            case intrinsic
+            case upsidePct = "upsidePct"
+            case verdict
+            case buyBelow = "buyBelow"
+            case bear, base, bull
+            case growthUsed = "growthUsed"
+        }
+    }
+
+    struct Relative: Codable {
+        let vsPeers: VsPeers?
+        let vsSector: VsSector?
+        let vsMarket: VsMarket?
+
+        enum CodingKeys: String, CodingKey {
+            case vsPeers = "vs_peers"
+            case vsSector = "vs_sector"
+            case vsMarket = "vs_market"
+        }
+
+        struct VsPeers: Codable {
+            let percentile: Double?
+            let verdict: String?
+        }
+
+        struct VsSector: Codable {
+            let percentile: Double?
+            let medianPs: Double?
+            let medianEvEbitda: Double?
+
+            enum CodingKeys: String, CodingKey {
+                case percentile
+                case medianPs = "medianPs"
+                case medianEvEbitda = "medianEvEbitda"
+            }
+        }
+
+        struct VsMarket: Codable {
+            let percentile: Double?
+            let medianPe: Double?
+
+            enum CodingKeys: String, CodingKey {
+                case percentile
+                case medianPe = "medianPe"
+            }
+        }
+    }
+}
+
+// MARK: - WallStreet (mirrors WallStreetSnapshot from data_snapshot)
+
+struct WallStreet: Codable {
+    let moatScore: Int?
+    let upsideScore: Int?
+    let marketConditionScore: Int?
+    let compAdvScore: Int?
+    let moatRationale: String?
+    let upsideRationale: String?
+    let marketConditionRationale: String?
+    let compAdvRationale: String?
+    let thesis: String?
+
+    enum CodingKeys: String, CodingKey {
+        case moatScore = "moat_score"
+        case upsideScore = "upside_score"
+        case marketConditionScore = "market_condition_score"
+        case compAdvScore = "comp_adv_score"
+        case moatRationale = "moat_rationale"
+        case upsideRationale = "upside_rationale"
+        case marketConditionRationale = "market_condition_rationale"
+        case compAdvRationale = "comp_adv_rationale"
+        case thesis
+    }
+}
+
+// MARK: - PeerCompany (mirrors PeerCompany[] from data_snapshot.peer_comparison)
+
+struct PeerCompany: Codable, Identifiable {
+    var id: String { ticker }
+    let ticker: String
+    let isTarget: Bool
+    let psTtm: Double?
+    let evEbitda: Double?
+    let grossMargin: Double?
+    let revGrowth: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case ticker
+        case isTarget = "isTarget"
+        case psTtm = "psTtm"
+        case evEbitda = "evEbitda"
+        case grossMargin = "grossMargin"
+        case revGrowth = "revGrowth"
     }
 }
 

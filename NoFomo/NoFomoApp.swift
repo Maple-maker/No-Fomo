@@ -2,9 +2,25 @@ import SwiftUI
 import UIKit
 import UserNotifications
 
-class AppDelegate: NSObject, UIApplicationDelegate {
+// MARK: — NotificationRouter (deep-link bridge)
+// Set on tap via UNUserNotificationCenterDelegate; WP-E wires the presentation side.
+
+final class NotificationRouter: ObservableObject {
+    @Published var pendingTicker: String?
+    static let shared = NotificationRouter()
+    private init() {}
+}
+
+// MARK: — AppDelegate
+
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        // Register as the UNUserNotificationCenter delegate so foreground banners +
+        // tap handling are routed here instead of being silently dropped.
+        UNUserNotificationCenter.current().delegate = self
+
         // Never prompt at launch — the primer after onboarding owns the ask.
         // Silently re-register if the user already granted permission.
         UNUserNotificationCenter.current().getNotificationSettings { settings in
@@ -24,12 +40,42 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             try? await SupabaseService.shared.registerPushToken(token, userId: userId)
         }
     }
+
+    // MARK: UNUserNotificationCenterDelegate
+
+    /// Show banner + play sound even when the app is in the foreground.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound, .badge])
+    }
+
+    /// Handle tap on a notification — extract the ticker and publish it for deep-linking.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let userInfo = response.notification.request.content.userInfo
+        if let ticker = userInfo["ticker"] as? String {
+            DispatchQueue.main.async {
+                // TODO(WP-E): observe NotificationRouter.shared.pendingTicker to present DetailSheet
+                NotificationRouter.shared.pendingTicker = ticker
+            }
+        }
+        completionHandler()
+    }
 }
+
+// MARK: — App entry point
 
 @main
 struct NoFomoApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var auth = AuthService.shared
+    @StateObject private var notificationRouter = NotificationRouter.shared
     @AppStorage("hasSeenNotificationPrimer") private var hasSeenNotificationPrimer = false
 
     var body: some Scene {
@@ -39,6 +85,7 @@ struct NoFomoApp: App {
                     if hasSeenNotificationPrimer {
                         MainTabView()
                             .environmentObject(auth)
+                            .environmentObject(notificationRouter)
                     } else {
                         NotificationPrimerView { hasSeenNotificationPrimer = true }
                     }

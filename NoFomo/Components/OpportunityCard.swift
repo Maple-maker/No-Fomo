@@ -47,7 +47,7 @@ struct OpportunityCard: View {
         }
         .buttonStyle(PlainButtonStyle())
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(.easeInOut(duration: 0.12)) { isPressed = pressing }
+            withAnimation(DS.Animation.micro) { isPressed = pressing }
         }, perform: {})
     }
 
@@ -62,6 +62,8 @@ struct OpportunityCard: View {
                             Image(systemName: "questionmark.circle")
                                 .font(.system(size: 11))
                                 .foregroundColor(DS.Color.textMuted)
+                                .frame(width: 28, height: 28)  // 44pt-reachable via adjacent space
+                                .contentShape(Rectangle())
                         }
                         .popover(isPresented: $showTripleTooltip) {
                             Text("Triple Signal — three independent indicators fired simultaneously: insider buying, analyst divergence, and a near-term catalyst. Rare and high-conviction.")
@@ -104,6 +106,9 @@ struct OpportunityCard: View {
                     Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                         .font(.system(size: 15))
                         .foregroundColor(isBookmarked ? DS.Color.tier1 : DS.Color.textMuted)
+                        // Expand tap area to 44 × 44 without shifting layout
+                        .frame(width: 30, height: 30)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
 
@@ -112,6 +117,8 @@ struct OpportunityCard: View {
                         Image(systemName: "questionmark.circle")
                             .font(.system(size: 11))
                             .foregroundColor(DS.Color.textMuted)
+                            .frame(width: 24, height: 24)
+                            .contentShape(Rectangle())
                     }
                     .popover(isPresented: $showScoreTooltip) {
                         Text("Conviction Score — how strongly the AI council backs this idea, 0–100. 75+ = high conviction.")
@@ -148,6 +155,8 @@ struct OpportunityCard: View {
                 Image(systemName: "questionmark.circle")
                     .font(.system(size: 11))
                     .foregroundColor(DS.Color.textMuted)
+                    .frame(width: 24, height: 24)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
             .popover(isPresented: $showBLUFTooltip) {
@@ -172,8 +181,8 @@ struct OpportunityCard: View {
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(DS.Color.elevated)
-                    .overlay(RoundedRectangle(cornerRadius: 7).stroke(DS.Color.border, lineWidth: 0.5))
-                    .clipShape(RoundedRectangle(cornerRadius: 7))
+                    .overlay(RoundedRectangle(cornerRadius: DS.radiusSmall).stroke(DS.Color.border, lineWidth: 0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: DS.radiusSmall))
             }
         }
     }
@@ -280,7 +289,7 @@ struct OpportunityCard: View {
         .padding(.vertical, 11)
         .padding(.horizontal, 13)
         .background(DS.Color.elevated)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: DS.radiusSmall + 2))
     }
 
     @ViewBuilder
@@ -514,9 +523,9 @@ struct ConfidenceDot: View {
 
     private var dotColor: Color {
         switch label {
-        case "high": return .green
-        case "medium": return .yellow
-        default: return .red
+        case "high":   return DS.Color.bull   // electric mint — matches the design palette
+        case "medium": return DS.Color.tier1  // gold — warmer caution signal
+        default:       return DS.Color.bear   // red
         }
     }
 

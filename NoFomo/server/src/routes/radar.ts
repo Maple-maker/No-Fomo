@@ -10,8 +10,11 @@ import { getInsiderData, type InsiderResult } from '../tools/insider'
 import { getSupabaseAdmin } from '../lib/supabase'
 import { extractJsonBlock, buildRadarRow } from '../lib/opportunity'
 import { selectMode } from '../agents/tiers'
-import { runCouncil } from './council'
+import { runCouncil, runWallStreet } from './council'
 import type { CouncilVerdict, CIOArbiter } from '../agents/types'
+import type { ValuationSnapshot, WallStreetSnapshot } from '../lib/opportunity'
+import { notifyIfQualifying } from '../lib/pushNotify'
+import { getSectorPositioning, getMarketPositioning } from '../lib/peers'
 import { computeSignals } from '../lib/signals'
 import { tagThemes } from '../lib/themes'
 import { getPeerPositioning } from '../lib/peers'
@@ -211,6 +214,7 @@ router.post('/', async (req: Request, res: Response) => {
     let enrichment: TickerEnrichment | null = null
     let insiderResult: InsiderResult | null = null
     let peerPositioning: any = null
+    let stockDataForValuation: any = null   // reuse getStockData result for valuation assembly
     try {
       ;[enrichment, insiderResult] = await Promise.all([
         fullEnrich(ticker),
@@ -222,11 +226,14 @@ router.post('/', async (req: Request, res: Response) => {
         enrichment.tags = tagThemes(enrichment.ticker)
       }
 
-      // Compute peer positioning using stock data
+      // Compute peer positioning using stock data — also keep a reference for valuation assembly
       if (enrichment) {
         try {
           const sd = await getStockData(ticker)
-          if (sd) peerPositioning = await getPeerPositioning(ticker, sd)
+          if (sd) {
+            stockDataForValuation = sd
+            peerPositioning = await getPeerPositioning(ticker, sd)
+          }
           if (peerPositioning) console.log(`[radar] Peer positioning: ${peerPositioning.verdict} (${peerPositioning.percentileRank}th percentile)`)
         } catch (e) {
           console.error('[radar] Peer positioning failed:', e instanceof Error ? e.message : e)
@@ -315,6 +322,94 @@ router.post('/', async (req: Request, res: Response) => {
     const dataFreshness = new Date().toISOString()
     console.log(`[radar] Confidence: ${confidence.score} (${confidence.label}) — ${confidence.factors.join(', ')}`)
 
+    // ── Valuation assembly (DCF + relative: vs peers, sector, market) ────────
+    let valuationSnapshot: ValuationSnapshot | null = null
+    let wallStreetSnapshot: WallStreetSnapshot | null = null
+    try {
+      const dcfResult = enrichment?.dcfValuation ?? null
+      const dcfBlock: ValuationSnapshot['dcf'] = dcfResult
+        ? {
+            intrinsic: dcfResult.intrinsicPerShare,
+            upsidePct: dcfResult.upsidePct,
+            verdict: dcfResult.verdict,
+            buyBelow: dcfResult.buyBelow,
+            bear: dcfResult.bearValue,
+            base: dcfResult.baseValue,
+            bull: dcfResult.bullValue,
+            growthUsed: dcfResult.growthUsed,
+          }
+        : null
+
+      // Sector + market positioning — parallel fetches
+      const sectorStr = enrichment?.sector ?? structured.sector ?? ''
+      const [sectorPos, marketPos] = await Promise.all([
+        sectorStr && stockDataForValuation
+          ? getSectorPositioning(sectorStr, stockDataForValuation).catch(() => null)
+          : Promise.resolve(null),
+        stockDataForValuation
+          ? getMarketPositioning(stockDataForValuation).catch(() => null)
+          : Promise.resolve(null),
+      ])
+
+      if (sectorPos) console.log(`[radar] Sector positioning (${sectorStr}): ${sectorPos.percentile}th pct, medianPs=${sectorPos.medianPs.toFixed(1)}x`)
+      if (marketPos) console.log(`[radar] Market positioning: ${marketPos.percentile}th pct, medianPe=${marketPos.medianPe.toFixed(1)}x`)
+
+      // Composite verdict rule
+      const peerVerdict = peerPositioning?.verdict ?? null
+      let composite: ValuationSnapshot['composite_verdict'] = 'fair'
+      if (
+        dcfBlock?.verdict === 'undervalued' ||
+        (peerVerdict === 'cheap_growth' && sectorPos && sectorPos.percentile < 40)
+      ) {
+        composite = 'undervalued'
+      } else if (
+        dcfBlock?.verdict === 'overvalued' ||
+        ((peerVerdict === 'expensive' || peerVerdict === 'value_trap') && sectorPos && sectorPos.percentile > 70)
+      ) {
+        composite = 'overvalued'
+      }
+
+      valuationSnapshot = {
+        dcf: dcfBlock,
+        relative: {
+          vs_peers: peerPositioning
+            ? { percentile: peerPositioning.percentileRank, verdict: peerPositioning.verdict }
+            : null,
+          vs_sector: sectorPos
+            ? { percentile: sectorPos.percentile, medianPs: sectorPos.medianPs, medianEvEbitda: sectorPos.medianEvEbitda }
+            : null,
+          vs_market: marketPos
+            ? { percentile: marketPos.percentile, medianPe: marketPos.medianPe }
+            : null,
+        },
+        composite_verdict: composite,
+      }
+      console.log(`[radar] Valuation snapshot: composite=${composite} dcf=${dcfBlock?.verdict ?? 'n/a'}`)
+    } catch (e) {
+      console.error('[radar] Valuation assembly failed:', e instanceof Error ? e.message : e)
+    }
+
+    // ── Wall Street analyst — independent of CIO, reads dossier directly ─────
+    // Rate-limit stagger (matches the existing 2-3s pattern between council calls)
+    await new Promise(r => setTimeout(r, 3000))
+    try {
+      const wsAnalysis = await runWallStreet(finalText, valuationSnapshot)
+      wallStreetSnapshot = {
+        moat_score: wsAnalysis.moatScore,
+        upside_score: wsAnalysis.upsideScore,
+        market_condition_score: wsAnalysis.marketConditionScore,
+        comp_adv_score: wsAnalysis.compAdvScore,
+        moat_rationale: wsAnalysis.moatRationale,
+        upside_rationale: wsAnalysis.upsideRationale,
+        market_condition_rationale: wsAnalysis.marketConditionRationale,
+        comp_adv_rationale: wsAnalysis.compAdvRationale,
+        thesis: wsAnalysis.thesis,
+      }
+      console.log(`[radar] Wall Street: moat=${wsAnalysis.moatScore} upside=${wsAnalysis.upsideScore} mktCond=${wsAnalysis.marketConditionScore} compAdv=${wsAnalysis.compAdvScore}`)
+    } catch (e) {
+      console.error('[radar] Wall Street analyst failed:', e instanceof Error ? e.message : e)
+    }
+
     const row = buildRadarRow(
       structured,
       councilResult?.bull ?? { verdict: 'BULL', reasoning: '' },
@@ -359,6 +454,8 @@ router.post('/', async (req: Request, res: Response) => {
         peerPercentileRank: peerPositioning?.percentileRank,
         peerVerdict: peerPositioning?.verdict,
         peerComparison: peerPositioning?.table,
+        valuation: valuationSnapshot ?? undefined,
+        wallStreet: wallStreetSnapshot ?? undefined,
         contrarian: signals.contrarian,
         smartMoneyScore: Math.round(signals.smartMoney / 10),        // 0–100 → 1–10
         governmentScore: Math.round(signals.government / 10),        // 0–100 → 1–10
@@ -442,7 +539,10 @@ router.post('/', async (req: Request, res: Response) => {
         const { error } = await supabase.from('radar_opportunities').insert(row as any)
         if (error) { res.status(500).json({ error: 'Supabase write failed', detail: error.message }); return }
         persisted = true
-        // Fire push notifications for Tier 1/2 discoveries (non-blocking)
+        // APNs device push for qualifying Tier 1/2 discoveries (non-blocking; no-ops if APNs env unset).
+        // notifyIfQualifying applies the full notify policy internally (Tier 1 always; Tier 2 if catalyst>=8 or all dims>=7).
+        notifyIfQualifying(row).catch(e => console.warn('[radar] APNs push failed:', e))
+        // Existing ntfy channel — Fire push notifications for Tier 1/2 discoveries (non-blocking)
         if (row.tier <= 2) {
           import('./notify').then(m => m.dispatchNotifications({
             ticker,

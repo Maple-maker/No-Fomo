@@ -71,6 +71,21 @@ export type CIOArbiter = {
   consensus_risk?: boolean
 }
 
+// ── Wall Street analyst output (WP-D) ──
+// Sell-side-style scoring: reads the same dossier as the CIO (no anchoring on CIO output).
+// Each score is 1-10, grounded in the valuation numbers passed alongside the dossier.
+export type WallStreetAnalysis = {
+  moatScore: number               // 1-10: durability of competitive moat
+  upsideScore: number             // 1-10: conviction on upside potential
+  marketConditionScore: number    // 1-10: favorability of current market backdrop
+  compAdvScore: number            // 1-10: competitive advantage relative to peers
+  moatRationale: string           // one-line reason for moat score
+  upsideRationale: string         // one-line reason for upside score
+  marketConditionRationale: string
+  compAdvRationale: string
+  thesis: string                  // one-paragraph sell-side synthesis
+}
+
 export type StructuredOpportunity = {
   ticker: string
   companyName: string
