@@ -38,6 +38,27 @@ data_snapshot gains:
 - [ ] Live re-scan one ticker (KTOS) → confirm data_snapshot has reasoning + sources.
 - [ ] xcodebuild green; review diffs; commit + push (frequent — parallel opencode agent deletes untracked files).
 
+## Review (2026-06-18) — DONE, committed a963165 (local, not pushed)
+Both tracks landed + verified. `tsc --noEmit` clean; `buildRadarRow` unit test asserts all
+9 new fields populate (no regression); `xcodebuild -scheme NoFomo` BUILD SUCCEEDED.
+
+- Server: reasoning (gemini/deepseek/cio) + `sources` + 4 real key-metrics now persist to data_snapshot.
+- iOS: council panels render reasoning · peer table replaces edgeFromBull · 4 key-metrics (hidden when empty) ·
+  tappable sources wired into body · chart S/R lines + RSI/MACD badges.
+- Caught + fixed in review: agent rendered peer gross-margin/rev-growth with `*100` (×100 too big) —
+  getStockData stores them as percent numbers already (28.3, not 0.283). Fixed.
+- Stale-backlog correction: `councilSection` was ALREADY wired in the body (a prior commit fixed the
+  orphan); the real unlock was the SERVER persisting reasoning (now done). Removed dead councilSummarySection.
+
+### Discovered data gaps (not code bugs — flagged for follow-up)
+- `peer_comparison` metric VALUES are null on existing rows (e.g. KTOS): peers.ts emits the right tickers
+  but getStockData returned nulls at scan time (Yahoo). iOS renders "—". Fresh scans + Yahoo cooperation populate.
+- `smart_money_signal`/`government_signal` empty on every row (radar.ts filter yields nothing). Minor.
+
+### Not yet verified end-to-end (offered, not run)
+- A live re-scan would confirm real data populates at runtime, but it mutates the PRODUCTION feed
+  (delete+reinsert; a closed window would PRUNE the row) and spends API — so left for Jaiden / the next cron.
+
 ## Gated / flagged (NOT doing autonomously)
 - #2 Analyst Consensus — needs Jaiden's spec (range bar vs richer display).
 - RLS lock (`supabase_rls_lock.sql`) — apply only AFTER Jaiden ⌘R-confirms rebuilt app reads `radar_feed_public` (else breaks live anon app).
