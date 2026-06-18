@@ -562,6 +562,10 @@ struct KeyMetricsData: Codable {
     let operatingMargin: String?
     let dividendYield: String?
     let beta: String?
+    let psTtm: String?
+    let pfcf: String?
+    let revGrowthYoy: String?
+    let shortPct: String?
 
     enum CodingKeys: String, CodingKey {
         case peTrailing = "pe_trailing"
@@ -571,10 +575,15 @@ struct KeyMetricsData: Codable {
         case operatingMargin = "operating_margin"
         case dividendYield = "dividend_yield"
         case beta
+        case psTtm = "ps_ttm"
+        case pfcf
+        case revGrowthYoy = "rev_growth_yoy"
+        case shortPct = "short_pct"
     }
 
     var hasAnyRatio: Bool {
-        [peTrailing, peForward, evEbitda, grossMargin, operatingMargin, dividendYield, beta]
+        [peTrailing, peForward, evEbitda, grossMargin, operatingMargin, dividendYield, beta,
+         psTtm, pfcf, revGrowthYoy, shortPct]
             .contains { ($0?.isEmpty == false) && $0 != "N/A" }
     }
 }

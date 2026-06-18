@@ -100,6 +100,7 @@ type RadarRow = {
       revenue?: string; net_income?: string; eps?: string
       pe_trailing?: string; pe_forward?: string; ev_ebitda?: string
       gross_margin?: string; operating_margin?: string; dividend_yield?: string; beta?: string
+      ps_ttm?: string; pfcf?: string; rev_growth_yoy?: string; short_pct?: string
     }
     // Insider activity
     insider_total_buys?: number; insider_total_sells?: number
@@ -122,6 +123,12 @@ type RadarRow = {
     avg_price_target?: number
     recent_analyst_actions?: string[][]
     council_summary?: string
+    // Per-model council reasoning (gemini = bull lens, deepseek = bear lens, cio = arbiter synthesis)
+    gemini_reasoning?: string
+    deepseek_reasoning?: string
+    cio_reasoning?: string
+    // Thesis-level evidence links: [label, url] pairs
+    sources?: string[][]
     // New fundamental quality signals
     rev_acceleration?: number | null
     insider_pct?: number | null
@@ -200,6 +207,11 @@ export function buildRadarRow(
     analystConsensusString?: string; analystCount?: number; avgPriceTarget?: number
     recentAnalystActions?: string[][]
     councilSummary?: string
+    sources?: string[][]
+    keyMetricsPsTtm?: string
+    keyMetricsPfcf?: string
+    keyMetricsRevGrowth?: string
+    keyMetricsShortPct?: string
     // Insider data
     insiderTotalBuys?: number; insiderTotalSells?: number
     insiderBuyVolume?: number; insiderSellVolume?: number
@@ -331,6 +343,11 @@ export function buildRadarRow(
         operating_margin: structured.keyMetrics?.operatingMargin || '',
         dividend_yield: structured.keyMetrics?.dividendYield || '',
         beta: structured.keyMetrics?.beta || '',
+        // Real numbers from Yahoo (getStockData) — LLM keyMetrics only carries the 7 above
+        ps_ttm: enrichment?.keyMetricsPsTtm || '',
+        pfcf: enrichment?.keyMetricsPfcf || '',
+        rev_growth_yoy: enrichment?.keyMetricsRevGrowth || '',
+        short_pct: enrichment?.keyMetricsShortPct || '',
       },
       price_history: enrichment?.priceHistory ?? [],
       rsi_value: enrichment?.rsiValue,
@@ -346,6 +363,11 @@ export function buildRadarRow(
       avg_price_target: enrichment?.avgPriceTarget ?? 0,
       recent_analyst_actions: enrichment?.recentAnalystActions ?? [],
       council_summary: enrichment?.councilSummary ?? '',
+      // Per-model council reasoning — verdicts already carry their reasoning, just persist it
+      gemini_reasoning: bull.reasoning ?? '',
+      deepseek_reasoning: bear.reasoning ?? '',
+      cio_reasoning: neutral.synthesis ?? '',
+      sources: enrichment?.sources ?? [],
       // Insider activity
       insider_total_buys: enrichment?.insiderTotalBuys ?? 0,
       insider_total_sells: enrichment?.insiderTotalSells ?? 0,

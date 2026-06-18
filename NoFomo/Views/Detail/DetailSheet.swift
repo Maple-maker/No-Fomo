@@ -96,6 +96,7 @@ struct DetailSheet: View {
                             bearCaseSection            // Risks, bear case + invalidation
                             // ── NEWS ──
                             headlinesSection           // Recent headlines (clickable)
+                            sourcesSection             // Evidence sources (tappable links)
                             // ── DEEP DIVE (collapsed) ──
                             councilSection             // AI Council Debate (individual model panels)
                             insiderActivitySection     // Form 4 transactions
@@ -288,22 +289,30 @@ struct DetailSheet: View {
                         }
                         .stroke(Color.white.opacity(0.04), style: StrokeStyle(lineWidth: 0.5))
 
-                        // Support/resistance lines
-                        if opportunity.supportLevel > 0 && opportunity.resistanceLevel > 0 {
+                        // Support/resistance lines with S/R labels
+                        if opportunity.supportLevel > 0 {
+                            let sY = CGFloat(100) * (1 - CGFloat((opportunity.supportLevel - dataMin) / range))
                             Path { path in
-                                let h: CGFloat = 100
-                                let y = h * (1 - CGFloat((opportunity.resistanceLevel - dataMin) / range))
-                                path.move(to: CGPoint(x: 0, y: y))
-                                path.addLine(to: CGPoint(x: 300, y: y))
+                                path.move(to: CGPoint(x: 0, y: sY))
+                                path.addLine(to: CGPoint(x: 300, y: sY))
                             }
-                            .stroke(Color.white.opacity(0.10), style: StrokeStyle(lineWidth: 1, dash: [4,4]))
+                            .stroke(DS.Color.bull.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                            Text("S")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(DS.Color.bull.opacity(0.7))
+                                .position(x: 8, y: sY - 7)
+                        }
+                        if opportunity.resistanceLevel > 0 {
+                            let rY = CGFloat(100) * (1 - CGFloat((opportunity.resistanceLevel - dataMin) / range))
                             Path { path in
-                                let h: CGFloat = 100
-                                let y = h * (1 - CGFloat((opportunity.supportLevel - dataMin) / range))
-                                path.move(to: CGPoint(x: 0, y: y))
-                                path.addLine(to: CGPoint(x: 300, y: y))
+                                path.move(to: CGPoint(x: 0, y: rY))
+                                path.addLine(to: CGPoint(x: 300, y: rY))
                             }
-                            .stroke(Color.white.opacity(0.10), style: StrokeStyle(lineWidth: 1, dash: [4,4]))
+                            .stroke(DS.Color.bear.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                            Text("R")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(DS.Color.bear.opacity(0.7))
+                                .position(x: 8, y: rY + 7)
                         }
 
                         // Price line
@@ -368,6 +377,48 @@ struct DetailSheet: View {
                         .font(.system(size: 8)).foregroundColor(DS.Color.textMuted)
                 }
                 .padding(.horizontal, 20).padding(.top, 2)
+
+                // ── Signal badges (RSI overbought/oversold, MACD cross) ──
+                let rsiOverbought = opportunity.rsiValue > 70
+                let rsiOversold = opportunity.rsiValue < 30
+                let macdBullish = opportunity.macdTrend == "bullish"
+                let macdBearish = opportunity.macdTrend == "bearish"
+                if rsiOverbought || rsiOversold || macdBullish || macdBearish {
+                    HStack(spacing: 6) {
+                        if rsiOverbought {
+                            Text("RSI OVERBOUGHT")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(DS.Color.bear)
+                                .padding(.horizontal, 7).padding(.vertical, 3)
+                                .background(DS.Color.bear.opacity(0.12))
+                                .clipShape(Capsule())
+                        } else if rsiOversold {
+                            Text("RSI OVERSOLD")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(DS.Color.bull)
+                                .padding(.horizontal, 7).padding(.vertical, 3)
+                                .background(DS.Color.bull.opacity(0.12))
+                                .clipShape(Capsule())
+                        }
+                        if macdBullish {
+                            Text("MACD BULLISH CROSS")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(DS.Color.bull)
+                                .padding(.horizontal, 7).padding(.vertical, 3)
+                                .background(DS.Color.bull.opacity(0.12))
+                                .clipShape(Capsule())
+                        } else if macdBearish {
+                            Text("MACD BEARISH CROSS")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(DS.Color.bear)
+                                .padding(.horizontal, 7).padding(.vertical, 3)
+                                .background(DS.Color.bear.opacity(0.12))
+                                .clipShape(Capsule())
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20).padding(.top, 4)
+                }
 
                 // ── Horizon selector chips ──
                 HStack(spacing: 8) {
@@ -484,23 +535,6 @@ struct DetailSheet: View {
     }
 
     // MARK: Council Summary (AI debate verdict)
-    private var councilSummarySection: some View {
-        let summary = opportunity.councilSummary ?? ""
-        if summary.isEmpty { return AnyView(EmptyView()) }
-        return AnyView(
-            VStack(alignment: .leading, spacing: 8) {
-                Divider().background(DS.Color.border)
-                sectionLabel("AI COUNCIL DEBATE")
-                Text(summary)
-                    .font(.system(size: 13))
-                    .foregroundColor(DS.Color.textSecondary)
-                    .lineSpacing(4)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.horizontal, 20).padding(.top, 16)
-        )
-    }
-
     // MARK: Headlines (2-3 clickable)
     private var headlinesSection: some View {
         let items = opportunity.recentHeadlines.filter { $0.count >= 2 && !$0[0].isEmpty }
@@ -822,33 +856,38 @@ struct DetailSheet: View {
     }
 
     // MARK: Sources
+    @ViewBuilder
     private var sourcesSection: some View {
-        ExpandableSection(
-            title: "Sources & Evidence",
-            badge: AnyView(
-                Text("\(opportunity.sources.count)").font(DS.Font.mono(11)).foregroundColor(DS.Color.accent)
-            )
-        ) {
-            VStack(spacing: 0) {
-                ForEach(Array(opportunity.sources.enumerated()), id: \.offset) { i, item in
-                    let label = item.count > 0 ? item[0] : ""
-                    let url = item.count > 1 ? item[1] : ""
-                    Button(action: {
-                        if let u = URL(string: url) { UIApplication.shared.open(u) }
-                    }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "link").font(.system(size: 10)).foregroundColor(DS.Color.accent)
-                            Text(label).font(.system(size: 13)).foregroundColor(.white)
-                            Spacer()
-                            Image(systemName: "arrow.up.right").font(.system(size: 9)).foregroundColor(DS.Color.textMuted)
+        let validSources = opportunity.sources.filter { $0.count >= 2 && !$0[0].isEmpty }
+        if !validSources.isEmpty {
+            ExpandableSection(
+                title: "Sources & Evidence",
+                badge: AnyView(
+                    Text("\(validSources.count)").font(DS.Font.mono(11)).foregroundColor(DS.Color.accent)
+                )
+            ) {
+                VStack(spacing: 0) {
+                    ForEach(Array(validSources.enumerated()), id: \.offset) { i, item in
+                        let label = item[0]
+                        let url = item[1]
+                        Button(action: {
+                            if let u = URL(string: url) { UIApplication.shared.open(u) }
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "link").font(.system(size: 10)).foregroundColor(DS.Color.accent)
+                                Text(label).font(.system(size: 13)).foregroundColor(.white)
+                                Spacer()
+                                Image(systemName: "arrow.up.right").font(.system(size: 9)).foregroundColor(DS.Color.textMuted)
+                            }
+                            .padding(.horizontal, 13).padding(.vertical, 10)
+                            .background(i % 2 == 0 ? Color.clear : DS.Color.card)
                         }
-                        .padding(.horizontal, 13).padding(.vertical, 10)
-                        .background(i % 2 == 0 ? Color.clear : DS.Color.card)
+                        .buttonStyle(.plain)
                     }
                 }
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(DS.Color.border, lineWidth: 0.5))
             }
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(DS.Color.border, lineWidth: 0.5))
         }
     }
 
@@ -881,8 +920,10 @@ struct DetailSheet: View {
                         .font(.system(size: 11, weight: .semibold)).foregroundColor(color)
                     VerdictChip(verdict: verdict)
                 }
-                Text(reasoning)
-                    .font(.system(size: 13.5)).foregroundColor(DS.Color.textSecondary).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+                if !reasoning.isEmpty {
+                    Text(reasoning)
+                        .font(.system(size: 13.5)).foregroundColor(DS.Color.textSecondary).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+                }
             }
             .padding(.leading, 11)
         }
@@ -1487,11 +1528,11 @@ struct DetailSheet: View {
                                     .font(DS.Font.mono(11))
                                     .foregroundColor(isTarget ? DS.Color.tier1 : DS.Color.textSecondary)
                                     .frame(width: 66, alignment: .trailing)
-                                Text(peer.grossMargin.map { String(format: "%.0f%%", $0 * 100) } ?? "—")
+                                Text(peer.grossMargin.map { String(format: "%.0f%%", $0) } ?? "—")
                                     .font(DS.Font.mono(11))
                                     .foregroundColor(isTarget ? DS.Color.tier1 : DS.Color.textSecondary)
                                     .frame(width: 40, alignment: .trailing)
-                                Text(peer.revGrowth.map { String(format: "%+.0f%%", $0 * 100) } ?? "—")
+                                Text(peer.revGrowth.map { String(format: "%+.0f%%", $0) } ?? "—")
                                     .font(DS.Font.mono(11))
                                     .foregroundColor(
                                         peer.revGrowth.map { $0 >= 0 ? DS.Color.bull : DS.Color.bear } ?? DS.Color.textMuted
@@ -1614,12 +1655,16 @@ struct DetailSheet: View {
                 )
             ) {
                 VStack(spacing: 0) {
+                    metricRow("P/S", km.psTtm, explainer: "Price-to-Sales: what the market pays for each dollar of revenue. Useful for companies that aren't yet profitable. Below 5x is cheap for high-growth; below 2x can signal deep value.")
                     metricRow("P/E (Trailing)", km.peTrailing, explainer: "How many dollars you're paying for $1 of last year's profit. A typical company trades at 20-25x. Anything above 50x means investors expect earnings to grow several times over before this price makes sense.")
                     metricRow("P/E (Forward)", km.peForward, explainer: "What you're paying for NEXT year's expected profit. If forward P/E is much lower than trailing, earnings are expected to jump significantly.")
+                    metricRow("P/FCF", km.pfcf, explainer: "Price-to-Free-Cash-Flow: what you pay for every dollar of actual cash the business generates after capex. More reliable than earnings. Below 20x is generally attractive.")
                     metricRow("EV/EBITDA", km.evEbitda, explainer: "The company's total price tag (including debt) divided by its operating profit. The S&P 500 averages ~15x.")
                     metricRow("Gross Margin", km.grossMargin, explainer: "For every $100 of sales, how much is left after making the product. Software companies typically run 70-85%.")
                     metricRow("Operating Margin", km.operatingMargin, explainer: "After paying for the product AND running the business, what % is profit. Above 20% is strong.")
+                    metricRow("Rev Growth", km.revGrowthYoy, explainer: "Year-over-year revenue growth. A company growing 20%+ justifies a premium valuation. Slowing growth is often the first signal of a thesis breaking down.")
                     metricRow("Dividend Yield", km.dividendYield, explainer: "How much cash you get paid each year just for holding. 0% is common for fast-growing companies.")
+                    metricRow("Short %", km.shortPct, explainer: "Percentage of the float sold short. Above 20% signals heavy skepticism — a short squeeze can trigger violent upside moves when the thesis plays out.")
                     metricRow("Beta", km.beta, explainer: "How much the stock moves vs the market. 1.0 = moves with the S&P 500. Above 1.5 = more volatile.")
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 12))

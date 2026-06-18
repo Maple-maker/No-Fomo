@@ -410,6 +410,20 @@ router.post('/', async (req: Request, res: Response) => {
       console.error('[radar] Wall Street analyst failed:', e instanceof Error ? e.message : e)
     }
 
+    // Build the thesis-level source list BEFORE persisting so it lands in data_snapshot.
+    // (Previously this ran AFTER the insert and was only returned in the HTTP response —
+    //  so data_snapshot.sources was empty on every row. "A signal needs a link.")
+    const webSources = extractSourcesFromText(finalText + ' ' + allSourceUrls.join(' '))
+    const quiverSourceUrls = enrichment?.quiver ? formatSources(enrichment.quiver).map(s => ({ label: s.label, url: s.url })) : []
+    const headlineUrls = (enrichment?.headlines || []).map(h => ({ label: h.headline.slice(0, 80), url: h.url }))
+    const seenUrls = new Set(webSources.map(s => s.url))
+    const allSources = [
+      ...webSources,
+      ...quiverSourceUrls.filter(s => !seenUrls.has(s.url)),
+      ...headlineUrls.filter(s => !seenUrls.has(s.url)),
+    ]
+    const sourcePairs: string[][] = allSources.map(s => [s.label, s.url])
+
     const row = buildRadarRow(
       structured,
       councilResult?.bull ?? { verdict: 'BULL', reasoning: '' },
@@ -430,6 +444,12 @@ router.post('/', async (req: Request, res: Response) => {
         avgPriceTarget: enrichment.analyst?.targetMean || 0,
         recentAnalystActions: [],
         councilSummary: councilResult?.summary || '',
+        sources: sourcePairs,
+        // Real key-metrics from Yahoo (stockDataForValuation) — populates P/S, P/FCF, rev growth, short %
+        keyMetricsPsTtm: stockDataForValuation?.ps_ttm != null ? `${stockDataForValuation.ps_ttm.toFixed(1)}x` : '',
+        keyMetricsPfcf: stockDataForValuation?.pfcf != null ? `${stockDataForValuation.pfcf.toFixed(1)}x` : '',
+        keyMetricsRevGrowth: stockDataForValuation?.rev_growth_yoy != null ? `${stockDataForValuation.rev_growth_yoy.toFixed(1)}%` : '',
+        keyMetricsShortPct: stockDataForValuation?.short_pct != null ? `${stockDataForValuation.short_pct.toFixed(1)}%` : '',
         // Insider data
         insiderTotalBuys: insiderResult?.totalBuys ?? 0,
         insiderTotalSells: insiderResult?.totalSells ?? 0,
@@ -507,7 +527,8 @@ router.post('/', async (req: Request, res: Response) => {
         expiresAt: asymmetry.expiresAt,
         radarV2Shadow,
       } : {
-        // Even without enrichment, record the window status.
+        // Even without enrichment, record the window status + sources.
+        sources: sourcePairs,
         windowStatus: asymmetry.status,
         asymmetryOpenScore: asymmetry.openScore,
         asymmetryDecayReasons: asymmetry.reasons,
@@ -560,17 +581,6 @@ router.post('/', async (req: Request, res: Response) => {
         })).catch(e => console.warn('[radar] thesis check failed:', e))
       }
     }
-
-    // Merge all sources, deduplicate by URL
-    const webSources = extractSourcesFromText(finalText + ' ' + allSourceUrls.join(' '))
-    const quiverSourceUrls = enrichment?.quiver ? formatSources(enrichment.quiver).map(s => ({ label: s.label, url: s.url })) : []
-    const headlineUrls = (enrichment?.headlines || []).map(h => ({ label: h.headline.slice(0, 80), url: h.url }))
-    const seenUrls = new Set(webSources.map(s => s.url))
-    const allSources = [
-      ...webSources,
-      ...quiverSourceUrls.filter(s => !seenUrls.has(s.url)),
-      ...headlineUrls.filter(s => !seenUrls.has(s.url)),
-    ]
 
     res.json({
       ticker, tier: row.tier, score: row.overall_score,
