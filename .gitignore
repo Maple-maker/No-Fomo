@@ -21,3 +21,5 @@ __pycache__/
 # Local agent / editor tooling
 .claude/
 .opencode/
+.vercel
+build out plan/
