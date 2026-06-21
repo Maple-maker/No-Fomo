@@ -4,6 +4,7 @@
 import type { TickerEnrichment } from './enrich'
 import type { InsiderResult } from '../tools/insider'
 import type { PeerPositioning } from './peers'
+import type { MacroContext } from './macroRegime'
 
 export interface SignalScores {
   composite: number      // 0–100, weighted average
@@ -392,6 +393,7 @@ function scoreContrarian(
   councilBull?: boolean,
   insider?: Partial<InsiderResult>,
   peerPositioning?: PeerPositioning | null,
+  macro?: MacroContext | null,
 ): { score: number; signals: string[] } {
   const signals: string[] = []
   let total = 0
@@ -459,13 +461,26 @@ function scoreContrarian(
     count++
   }
 
-  // Theme tailwind (structural demand secular tailwind)
+  // Theme tailwind (structural demand secular tailwind, macro-aware)
   if (e.tags && e.tags.length > 0) {
+    const defenseTag = e.tags.includes('Defense & GovTech')
     const bullThemes = ['Defense & GovTech', 'AI & Data Infrastructure']
     const hasTheme = e.tags.some((t: string) => bullThemes.includes(t))
     if (hasTheme) {
-      total += 75  // BOOSTED from 65
-      signals.push(`🎯 Structural tailwind: ${e.tags.join(', ')}`)
+      let tailwindScore = 75
+      let tailwindNote = e.tags.join(', ')
+      if (defenseTag && macro?.defense_spend_trend === 'rising') {
+        tailwindScore = 90
+        tailwindNote = `Defense tailwind: global spend rising + ${e.tags.join(', ')}`
+      } else if (defenseTag && macro?.defense_spend_trend === 'falling') {
+        tailwindScore = 45
+        tailwindNote = `⚠️ Defense spend contracting — macro headwind for ${e.tags.join(', ')}`
+      }
+      total += tailwindScore
+      signals.push(`🎯 Structural tailwind: ${tailwindNote}`)
+    } else if (macro?.regime_flags.includes('global_slowdown')) {
+      total += 35  // penalize cyclical/consumer plays in a global slowdown
+      signals.push(`⚠️ Global slowdown regime — macro headwind for ${e.tags[0]} exposure`)
     }
     count++
   }
@@ -919,12 +934,13 @@ export function computeSignals(
   insider: Partial<InsiderResult>,
   councilBull?: boolean,
   peerPositioning?: PeerPositioning | null,
+  macro?: MacroContext | null,
 ): SignalScores {
   const tech = scoreTechnical(enrichment)
   const fund = scoreFundamental(enrichment)
   const sent = scoreSentiment(enrichment, councilBull)
   const ins = scoreInsider(insider)
-  const contrarian = scoreContrarian(enrichment, councilBull, insider, peerPositioning)
+  const contrarian = scoreContrarian(enrichment, councilBull, insider, peerPositioning, macro)
   const smartMoney = scoreSmartMoney(enrichment, insider)
   const gov = scoreGovernment(enrichment)
 

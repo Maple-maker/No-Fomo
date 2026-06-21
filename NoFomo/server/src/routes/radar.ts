@@ -16,6 +16,7 @@ import type { ValuationSnapshot, WallStreetSnapshot } from '../lib/opportunity'
 import { notifyIfQualifying } from '../lib/pushNotify'
 import { getSectorPositioning, getMarketPositioning } from '../lib/peers'
 import { computeSignals } from '../lib/signals'
+import { getMacroContext } from '../lib/macroRegime'
 import { tagThemes } from '../lib/themes'
 import { getPeerPositioning } from '../lib/peers'
 import { getStockData, fetchChartPayload, ensureChartHistory, MIN_CHART_FLOOR } from '../lib/stockData'
@@ -274,12 +275,22 @@ router.post('/', async (req: Request, res: Response) => {
       }
     }
 
+    // ── Fetch macro regime context (cached 24h, non-blocking) ──
+    let macroContext = null
+    try {
+      macroContext = await getMacroContext()
+      if (macroContext) {
+        console.log(`[radar] macro: regime=${macroContext.macro_regime} defense=${macroContext.defense_spend_trend} flags=${macroContext.regime_flags.join(',') || 'none'}`)
+      }
+    } catch {}
+
     // ── Compute composite signal score ──
     const signals = computeSignals(
       enrichment || {},
       insiderResult || {},
       councilResult?.neutral.verdict === 'BULL',
       peerPositioning,
+      macroContext,
     )
 
     let radarV2Shadow = null
