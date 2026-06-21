@@ -32,7 +32,7 @@ struct WatchlistView: View {
                                     onToggleSave: { removeItem(opp) }
                                 )
                                 .onTapGesture { detailOpp = opp }
-                                .padding(.horizontal, 16)
+                                .padding(.horizontal, DS.paddingScreen)
                             }
                         }
                         .padding(.top, 4)
@@ -161,13 +161,13 @@ struct WatchlistRow: View {
                     .foregroundColor(DS.Color.bull)
             }
         }
-        .padding(13)
+        .padding(DS.paddingCompact)
         .background(DS.Color.card)
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: DS.radiusCard)
                 .stroke(DS.Color.border, lineWidth: 0.5)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .clipShape(RoundedRectangle(cornerRadius: DS.radiusCard))
     }
 }
 

@@ -121,7 +121,8 @@ After the markdown dossier, append a JSON scoring block:
   },
   "bullCase": "Concise bull thesis paragraph",
   "bearCase": "Concise bear thesis paragraph",
-  "financials": [["Revenue (TTM)", "$X"], ["Gross Margin", "X%"], ["Net Debt", "$X"], ["FCF", "$X"]],
+  "financials": [["Revenue (TTM)", "$X"], ["Net Income", "$X"], ["EPS", "$X.XX"], ["FCF", "$X"], ["Cash", "$X"], ["Total Debt", "$X"]],
+  "keyMetrics": {"peTrailing":"Xx","peForward":"Xx","evEbitda":"Xx","grossMargin":"X%","operatingMargin":"X%","dividendYield":"X%","beta":"X.X"},
   "redFlags": ["Risk 1", "Risk 2", "Risk 3"],
   "invalidation": "The specific condition that would invalidate the thesis"
 }

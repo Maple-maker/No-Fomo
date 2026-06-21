@@ -10,6 +10,7 @@ struct FeedView: View {
     @State private var tickerInput = ""
     @State private var showScanner = false
     @State private var showSupplyChain = false
+    @State private var feedMode = "radar"
 
     private let filters: [(id: String, label: String, bolt: Bool)] = [
         ("all", "All", false),
@@ -24,16 +25,25 @@ struct FeedView: View {
             DS.Color.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Scrollable feed
+                if feedMode == "community" {
+                    FeedHeader(
+                        count: 0,
+                        serverOnline: vm.serverOnline,
+                        onScanTap: { showScanner.toggle() },
+                        onSupplyChainTap: { showSupplyChain.toggle() }
+                    )
+                    feedModePicker
+                    CommunityIdeasFeed()
+                } else {
                 ScrollView {
                     VStack(spacing: 0) {
-                        // Header
                         FeedHeader(
                             count: vm.opportunities.count,
                             serverOnline: vm.serverOnline,
                             onScanTap: { showScanner.toggle() },
                             onSupplyChainTap: { showSupplyChain.toggle() }
                         )
+                        feedModePicker
 
                         // Scanner (collapsible)
                         if showScanner { scannerView }
@@ -104,9 +114,9 @@ struct FeedView: View {
                                     }
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 16)
-                                    .frame(height: 32)
+                                    .frame(height: 36)
                                     .background(DS.Color.accent)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    .clipShape(RoundedRectangle(cornerRadius: DS.radiusSmall))
                                 }
                             }
                             .padding(10)
@@ -176,7 +186,7 @@ struct FeedView: View {
                                     gaugeStyle: .ring,
                                     isLocked: !isPro
                                 )
-                                .padding(.horizontal, 16)
+                                .padding(.horizontal, DS.paddingScreen)
                             }
 
                             // Footer
@@ -189,6 +199,7 @@ struct FeedView: View {
                         }
                     }
                     .refreshable { await vm.loadFeed(isPremium: isPro) }
+                }
                 }
 
                 // Tab bar spacer
@@ -205,6 +216,29 @@ struct FeedView: View {
         .task {
             await vm.loadFeed(isPremium: isPro)
         }
+    }
+
+    private var feedModePicker: some View {
+        HStack(spacing: 0) {
+            ForEach([("radar", "Radar"), ("community", "Community")], id: \.0) { id, label in
+                Button(action: { withAnimation(DS.Animation.quick) { feedMode = id } }) {
+                    Text(label)
+                        .font(.system(size: 13, weight: feedMode == id ? .semibold : .medium))
+                        .foregroundColor(feedMode == id ? .white : DS.Color.textMuted)
+                        .frame(maxWidth: .infinity)
+                        // 36pt height satisfies touch target alongside tab label
+                        .padding(.vertical, 10)
+                        .background(feedMode == id ? DS.Color.accent.opacity(0.2) : Color.clear)
+                        .clipShape(RoundedRectangle(cornerRadius: DS.radiusSmall))
+                        .animation(DS.Animation.quick, value: feedMode)
+                }
+            }
+        }
+        .padding(4)
+        .background(DS.Color.elevated)
+        .clipShape(RoundedRectangle(cornerRadius: DS.radiusSmall + 2))
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
     }
 
     // MARK: - Scanner view
@@ -279,12 +313,14 @@ struct VerdictBadge: View {
     let label: String
     let verdict: String
 
+    private var badgeColor: Color { verdict == "BULL" ? DS.Color.bull : DS.Color.bear }
+
     var body: some View {
         Text(label)
             .font(.system(size: 9, weight: .bold))
-            .foregroundColor(verdict == "BULL" ? DS.Color.tier1 : .red)
-            .frame(width: 18, height: 18)
-            .background((verdict == "BULL" ? Color.green : Color.red).opacity(0.15))
+            .foregroundColor(badgeColor)
+            .frame(width: 20, height: 20)
+            .background(badgeColor.opacity(0.15))
             .clipShape(Circle())
     }
 }
@@ -323,31 +359,39 @@ struct FeedHeader: View {
                 Image(systemName: "point.3.connected.trianglepath.dotted")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(DS.Color.tier1)
-                    .frame(width: 34, height: 34)
-                    .background(DS.Color.elevated)
+                    .frame(width: DS.minTouchTarget, height: DS.minTouchTarget)
+                    .background(
+                        Circle()
+                            .fill(DS.Color.elevated)
+                            .frame(width: 36, height: 36)
+                    )
                     .overlay(
                         Circle()
                             .stroke(DS.Color.tier1.opacity(0.3), lineWidth: 0.5)
+                            .frame(width: 36, height: 36)
                     )
-                    .clipShape(Circle())
             }
             // Scan button
             Button(action: onScanTap) {
                 Image(systemName: "antenna.radiowaves.left.and.right")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(DS.Color.accent)
-                    .frame(width: 34, height: 34)
-                    .background(DS.Color.elevated)
+                    .frame(width: DS.minTouchTarget, height: DS.minTouchTarget)
+                    .background(
+                        Circle()
+                            .fill(DS.Color.elevated)
+                            .frame(width: 36, height: 36)
+                    )
                     .overlay(
                         Circle()
                             .stroke(DS.Color.border, lineWidth: 0.5)
+                            .frame(width: 36, height: 36)
                     )
-                    .clipShape(Circle())
             }
             // Avatar
             Circle()
                 .fill(DS.Color.elevated)
-                .frame(width: 34, height: 34)
+                .frame(width: 36, height: 36)
                 .overlay(
                     Circle()
                         .stroke(DS.Color.border, lineWidth: 0.5)
@@ -387,7 +431,7 @@ struct FilterChips: View {
                         }
                         .foregroundColor(active == filter.id ? DS.Color.background : DS.Color.textSecondary)
                         .padding(.horizontal, 14)
-                        .frame(height: 32)
+                        .frame(height: 36)
                         .background(
                             active == filter.id
                                 ? Color.white

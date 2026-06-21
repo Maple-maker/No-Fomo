@@ -60,7 +60,7 @@ struct RadarView: View {
                                     )
                                 }
                             }
-                            .padding(.horizontal, 16)
+                            .padding(.horizontal, DS.paddingScreen)
                             .padding(.top, 8)
                         }
                     }
@@ -98,13 +98,17 @@ struct RadarView: View {
                 Image(systemName: "plus")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(DS.Color.tier1)
-                    .frame(width: 34, height: 34)
-                    .background(DS.Color.elevated)
+                    .frame(width: DS.minTouchTarget, height: DS.minTouchTarget)
+                    .background(
+                        Circle()
+                            .fill(DS.Color.elevated)
+                            .frame(width: 36, height: 36)
+                    )
                     .overlay(
                         Circle()
                             .stroke(DS.Color.tier1.opacity(0.3), lineWidth: 0.5)
+                            .frame(width: 36, height: 36)
                     )
-                    .clipShape(Circle())
             }
         }
         .padding(.horizontal, 20)

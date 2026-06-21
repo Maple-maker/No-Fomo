@@ -30,6 +30,12 @@
 		D84893E997C772D6CDC2F340 /* TickerLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBEFE20B18E1F74532754F1E /* TickerLogo.swift */; };
 		DD7939896B2F5CDE95E0536D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4053B8DB966DA988D537FF58 /* Assets.xcassets */; };
 		F63D1978D4E942129E0F806C /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63E3EF6A5E780366C1D65A1F /* FeedView.swift */; };
+		A1B2C3D4E5F60718293A4B5C /* TradeIdea.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E4F5061728394A5B6C /* TradeIdea.swift */; };
+		A2B3C4D5E6F708192A3B4C5D /* TradeIdeasViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6D /* TradeIdeasViewModel.swift */; };
+		A3B4C5D6E7F8091A2B3C4D5E /* TradeIdeaCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3C4D5E6F708192A3B4C5D6E /* TradeIdeaCard.swift */; };
+		A4B5C6D7E8F9012A3B4C5D6F /* ComposeIdeaSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C5D6E7F8091A2B3C4D5E6F /* ComposeIdeaSheet.swift */; };
+		A5B6C7D8E9F0123A4B5C6D70 /* LeaderboardSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C6D7E8F9012A3B4C5D6E70 /* LeaderboardSheet.swift */; };
+		A6B7C8D9E0F1234A5B6C7D81 /* CommunityIdeasFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6C7D8E9F0123A4B5C6D7E81 /* CommunityIdeasFeed.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -57,13 +63,22 @@
 		BD917061A41426CD73547716 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		DBEFE20B18E1F74532754F1E /* TickerLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TickerLogo.swift; sourceTree = "<group>"; };
 		E8E53A699D1CFE92FB87A1C6 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		B1C2D3E4F5061728394A5B6C /* TradeIdea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeIdea.swift; sourceTree = "<group>"; };
+		B2C3D4E5F60718293A4B5C6D /* TradeIdeasViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeIdeasViewModel.swift; sourceTree = "<group>"; };
+		B3C4D5E6F708192A3B4C5D6E /* TradeIdeaCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeIdeaCard.swift; sourceTree = "<group>"; };
+		B4C5D6E7F8091A2B3C4D5E6F /* ComposeIdeaSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposeIdeaSheet.swift; sourceTree = "<group>"; };
+		B5C6D7E8F9012A3B4C5D6E70 /* LeaderboardSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardSheet.swift; sourceTree = "<group>"; };
+		B6C7D8E9F0123A4B5C6D7E81 /* CommunityIdeasFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunityIdeasFeed.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
 		0CC5A2E1AD4C1E89654271F0 /* Feed */ = {
 			isa = PBXGroup;
 			children = (
+				B6C7D8E9F0123A4B5C6D7E81 /* CommunityIdeasFeed.swift */,
+				B4C5D6E7F8091A2B3C4D5E6F /* ComposeIdeaSheet.swift */,
 				63E3EF6A5E780366C1D65A1F /* FeedView.swift */,
+				B5C6D7E8F9012A3B4C5D6E70 /* LeaderboardSheet.swift */,
 			);
 			path = Feed;
 			sourceTree = "<group>";
@@ -127,6 +142,7 @@
 			children = (
 				2EBCD50451AC8F550D98A85A /* FeedViewModel.swift */,
 				ABE1F5975972DE3774F89828 /* RadarViewModel.swift */,
+				B2C3D4E5F60718293A4B5C6D /* TradeIdeasViewModel.swift */,
 			);
 			name = ViewModels;
 			path = NoFomo/ViewModels;
@@ -156,6 +172,7 @@
 				55C93C85747164B1527C470A /* OpportunityCard.swift */,
 				66320A7AE59F23AC239912E8 /* ScoreGauge.swift */,
 				DBEFE20B18E1F74532754F1E /* TickerLogo.swift */,
+				B3C4D5E6F708192A3B4C5D6E /* TradeIdeaCard.swift */,
 			);
 			name = Components;
 			path = NoFomo/Components;
@@ -193,6 +210,7 @@
 			children = (
 				82DD381FAAF54564818B74FD /* CustomThesis.swift */,
 				94DE1395D92089EE94874B35 /* Opportunity.swift */,
+				B1C2D3E4F5061728394A5B6C /* TradeIdea.swift */,
 				BD917061A41426CD73547716 /* User.swift */,
 			);
 			name = Models;
@@ -315,6 +333,12 @@
 				D84893E997C772D6CDC2F340 /* TickerLogo.swift in Sources */,
 				CD4FCFBCA9975D45397EC64C /* User.swift in Sources */,
 				B53375707CB46FB24120A72B /* WatchlistView.swift in Sources */,
+				A1B2C3D4E5F60718293A4B5C /* TradeIdea.swift in Sources */,
+				A2B3C4D5E6F708192A3B4C5D /* TradeIdeasViewModel.swift in Sources */,
+				A3B4C5D6E7F8091A2B3C4D5E /* TradeIdeaCard.swift in Sources */,
+				A4B5C6D7E8F9012A3B4C5D6F /* ComposeIdeaSheet.swift in Sources */,
+				A5B6C7D8E9F0123A4B5C6D70 /* LeaderboardSheet.swift in Sources */,
+				A6B7C8D9E0F1234A5B6C7D81 /* CommunityIdeasFeed.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

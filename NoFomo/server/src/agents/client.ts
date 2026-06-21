@@ -77,7 +77,13 @@ export function getClaudeModel(): string {
 
 // ── Anthropic Claude — CIO arbiter ─────────────────────────────
 export async function callClaude(systemPrompt: string, userPrompt: string) {
-  if (process.env.ANTHROPIC_API_KEY) {
+  // CIO_MODEL override: force the arbiter through the router (OpenRouter/AnyAPI)
+  // with an explicit model — used to run the council on a free model (e.g.
+  // openrouter/owl-alpha) when the Anthropic account is dry. Bypasses the direct
+  // Anthropic path even if ANTHROPIC_API_KEY is still present.
+  const cioOverride = process.env.CIO_MODEL
+
+  if (process.env.ANTHROPIC_API_KEY && !cioOverride) {
     // Direct Anthropic SDK
     const { default: Anthropic } = await import('@anthropic-ai/sdk')
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -97,7 +103,7 @@ export async function callClaude(systemPrompt: string, userPrompt: string) {
 
   // Fallback to router (AnyAPI or OpenRouter)
   const client = getRouterClient()
-  const model = getClaudeModel()
+  const model = cioOverride || getClaudeModel()
 
   const response = await client.chat.completions.create({
     model,

@@ -62,6 +62,28 @@ export type CIOArbiter = {
   catalyst?: number
   management?: number
   minorityView?: string
+  // One-line rationale per dimension
+  asymmetryRationale?: string
+  convictionRationale?: string
+  catalystRationale?: string
+  managementRationale?: string
+  // True when both analysts agreed with similar reasoning — score penalized -10, tripleSignal forced false
+  consensus_risk?: boolean
+}
+
+// ── Wall Street analyst output (WP-D) ──
+// Sell-side-style scoring: reads the same dossier as the CIO (no anchoring on CIO output).
+// Each score is 1-10, grounded in the valuation numbers passed alongside the dossier.
+export type WallStreetAnalysis = {
+  moatScore: number               // 1-10: durability of competitive moat
+  upsideScore: number             // 1-10: conviction on upside potential
+  marketConditionScore: number    // 1-10: favorability of current market backdrop
+  compAdvScore: number            // 1-10: competitive advantage relative to peers
+  moatRationale: string           // one-line reason for moat score
+  upsideRationale: string         // one-line reason for upside score
+  marketConditionRationale: string
+  compAdvRationale: string
+  thesis: string                  // one-paragraph sell-side synthesis
 }
 
 export type StructuredOpportunity = {
@@ -88,10 +110,10 @@ export type StructuredOpportunity = {
   competitiveAdvantages?: string
   investmentRisks?: string
   keyMetrics?: {
-    revenue?: string; netIncome?: string; eps?: string
     peTrailing?: string; peForward?: string; evEbitda?: string
-    grossMargin?: string; operatingMargin?: string
-    cashAndEquivalents?: string; totalDebt?: string; dividendYield?: string
+    grossMargin?: string; operatingMargin?: string; dividendYield?: string; beta?: string
+    revenue?: string; netIncome?: string; eps?: string
+    cashAndEquivalents?: string; totalDebt?: string
   }
   redFlags: string[]
   invalidation: string

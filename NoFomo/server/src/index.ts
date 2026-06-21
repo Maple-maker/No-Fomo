@@ -13,6 +13,7 @@ import supplyChainRouter from './routes/supply-chain'
 import budgetCouncilRouter from './routes/budgetCouncil'
 import notifyRouter from './routes/notify'
 import thesisRouter from './routes/thesis'
+import ideasRouter from './routes/ideas'
 
 const app = express()
 const PORT = parseInt(process.env.PORT || '3001', 10)
@@ -60,6 +61,7 @@ app.use('/council', councilRouter)
 app.use('/council', budgetCouncilRouter)
 app.use('/notify', notifyRouter)
 app.use('/thesis', thesisRouter)
+app.use('/ideas', ideasRouter)
 
 // Only bind a port in local dev — on Vercel the app is exported as a serverless handler.
 if (!process.env.VERCEL) {

@@ -17,6 +17,18 @@ const NAV = [
     ),
   },
   {
+    href: '/dashboard/radar',
+    label: 'Radar',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <circle cx="9" cy="9" r="7.5" stroke="currentColor" strokeWidth="1.4"/>
+        <circle cx="9" cy="9" r="4.5" stroke="currentColor" strokeWidth="1" opacity="0.5"/>
+        <circle cx="9" cy="9" r="1.5" fill="currentColor"/>
+        <line x1="9" y1="1.5" x2="9" y2="9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.7"/>
+      </svg>
+    ),
+  },
+  {
     href: '/dashboard/portfolio',
     label: 'Portfolio',
     icon: (

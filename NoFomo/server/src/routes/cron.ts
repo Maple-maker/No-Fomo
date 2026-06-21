@@ -93,10 +93,25 @@ async function handleCron(req: Request, res: Response) {
     }
     console.log(`[cron] Complete: ${topPicks.length} top picks, ${results.length} radars, ${persisted} persisted, ${pruned} pruned`)
 
+    let ideasResolved = 0
+    try {
+      const ideasRes = await fetch(`${baseUrl}/ideas/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${CRON_SECRET}` },
+        body: JSON.stringify({ secret: CRON_SECRET }),
+      })
+      if (ideasRes.ok) {
+        const ideas = await ideasRes.json() as any
+        ideasResolved = ideas.resolvedCount ?? 0
+      }
+    } catch (e) {
+      console.warn('[cron] Ideas resolve failed:', e instanceof Error ? e.message : e)
+    }
+
     res.json({
       scanId, ranAt: new Date().toISOString(), candidates,
       topPicks: topPicks.slice(0, 10).map(p => ({ ticker: p.ticker, screenScore: p.screenScore, signals: p.signals, queueForRadar: !runRadars })),
-      radarsRun: results.length, persisted, pruned, results,
+      radarsRun: results.length, persisted, pruned, ideasResolved, results,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

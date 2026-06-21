@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import NotificationBell from './NotificationBell'
 
 interface TopbarProps {
   userName: string
@@ -58,11 +59,12 @@ export default function Topbar({ userName, avatarUrl, timezone }: TopbarProps) {
         </span>
       </div>
 
-      {/* Right: user */}
+      {/* Right: notifications + user */}
       <div className="flex items-center gap-2">
+        <NotificationBell />
         <button
           onClick={signOut}
-          className="text-xs px-3 py-1 rounded-lg transition-colors"
+          className="text-xs px-3 py-1 rounded-lg transition-colors cursor-pointer"
           style={{ color: 'var(--text-3)', background: 'transparent', border: '1px solid var(--border)' }}
         >
           Sign out

@@ -31,6 +31,8 @@ struct SettingsView: View {
                             Text("Sign out")
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundColor(DS.Color.bear)
+                                .frame(minHeight: DS.minTouchTarget, alignment: .center)
+                                .contentShape(Rectangle())
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 4)
@@ -71,26 +73,26 @@ struct SettingsView: View {
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(isPro ? DS.Color.textSecondary : Color(hex: "#06120c"))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 42)
+                    .frame(height: 44)
                     .background(
                         isPro
                             ? DS.Color.elevated
                             : DS.Color.bull
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 11))
+                    .clipShape(RoundedRectangle(cornerRadius: DS.radiusSmall + 3))
             }
         }
-        .padding(16)
+        .padding(DS.paddingCard)
         .background(
             isPro
                 ? DS.Color.bull.opacity(0.09)
                 : DS.Color.card
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: DS.radiusCard)
                 .stroke(DS.Color.border, lineWidth: 0.5)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: DS.radiusCard))
     }
 
     // MARK: Alerts section
@@ -141,10 +143,10 @@ struct SettingsView: View {
             }
             .background(DS.Color.card)
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: DS.radiusCard)
                     .stroke(DS.Color.border, lineWidth: 0.5)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .clipShape(RoundedRectangle(cornerRadius: DS.radiusCard))
         }
     }
 

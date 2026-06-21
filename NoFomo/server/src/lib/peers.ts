@@ -12,11 +12,22 @@ export interface PeerMetrics {
   pegScore: { ticker: number | null; median: number | null; rank: number }
 }
 
+// One row of the head-to-head comparison table (target first, then peers).
+export interface PeerCompany {
+  ticker: string
+  isTarget: boolean
+  psTtm: number | null
+  evEbitda: number | null
+  grossMargin: number | null
+  revGrowth: number | null
+}
+
 export interface PeerPositioning {
   peers: string[]
   percentileRank: number
   metrics: PeerMetrics
   verdict: 'cheap_growth' | 'fair' | 'expensive' | 'value_trap'
+  table: PeerCompany[]
 }
 
 const PEER_GROUPS: Record<string, string[]> = {
@@ -80,9 +91,24 @@ export async function getPeerPositioning(
     else if (percentileRank > 70 && (targetData.rev_growth_yoy || 0) < (revGrowthMedian || 0)) verdict = 'value_trap'
     else if (percentileRank > 70) verdict = 'expensive'
 
+    // Head-to-head table: target first, then each peer (preserving order + nulls).
+    const toRow = (tk: string, d: Partial<StockDataResult> | null, isTarget: boolean): PeerCompany => ({
+      ticker: tk,
+      isTarget,
+      psTtm: d?.ps_ttm ?? null,
+      evEbitda: d?.ev_ebitda ?? null,
+      grossMargin: d?.gross_margin ?? null,
+      revGrowth: d?.rev_growth_yoy ?? null,
+    })
+    const table: PeerCompany[] = [
+      toRow(t, targetData, true),
+      ...peersToFetch.map((p, i) => toRow(p, peerResults[i], false)),
+    ]
+
     return {
       peers: peersToFetch,
       percentileRank,
+      table,
       metrics: {
         psTtm: { ticker: targetData.ps_ttm || null, median: psTtmMedian, rank: computeRank(targetData.ps_ttm, psTtms) },
         psForward: { ticker: targetData.ps_ttm || null, median: psTtmMedian, rank: computeRank(targetData.ps_ttm, psTtms) },
@@ -112,4 +138,125 @@ function computeRank(value: number | null | undefined, peers: number[]): number 
   let rank = 0
   for (const p of sorted) if (value > p) rank++
   return Math.round((rank / sorted.length) * 100)
+}
+
+// ── Sector Constituents ──
+// ~8 liquid representative tickers per sector — periodically refresh this list
+// as the composition of each sector evolves. Used only for relative valuation,
+// not as a definitive index.
+const SECTOR_CONSTITUENTS: Record<string, string[]> = {
+  Technology:         ['MSFT', 'AAPL', 'META', 'GOOGL', 'ADBE', 'CRM', 'NOW', 'INTC'],
+  Semiconductors:     ['NVDA', 'AMD', 'AVGO', 'QCOM', 'MU', 'AMAT', 'LRCX', 'ASML'],
+  'Defense/Aerospace':['LMT', 'RTX', 'NOC', 'GD', 'BA', 'HII', 'LHX', 'LDOS'],
+  'Healthcare/Biotech':['LLY', 'JNJ', 'ABBV', 'MRK', 'AMGN', 'REGN', 'VRTX', 'BIIB'],
+  Energy:             ['XOM', 'CVX', 'COP', 'SLB', 'EOG', 'PSX', 'OXY', 'BKR'],
+  Financials:         ['JPM', 'BAC', 'GS', 'MS', 'V', 'MA', 'BLK', 'AXP'],
+  Consumer:           ['AMZN', 'TSLA', 'HD', 'MCD', 'NKE', 'SBUX', 'TGT', 'COST'],
+  Industrials:        ['HON', 'ETN', 'EMR', 'GE', 'CAT', 'DE', 'UPS', 'FDX'],
+  Communications:     ['GOOGL', 'META', 'NFLX', 'DIS', 'CMCSA', 'T', 'VZ', 'TMUS'],
+}
+
+// ── Broad-market basket (proxy for S&P 500 / broad market) ──
+// ~18 mega/large caps across sectors. This is a periodically-refreshed proxy —
+// it does not replicate any index; it gives a quick sense of where the target
+// sits vs. the general market on P/E.
+const BROAD_MARKET_BASKET = [
+  'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA',
+  'META', 'BRK-B', 'LLY', 'TSLA', 'AVGO',
+  'JPM', 'V', 'JNJ', 'XOM', 'UNH',
+  'HD', 'MA', 'PG',
+]
+
+/** Map an incoming sector string to a SECTOR_CONSTITUENTS key via case-insensitive substring. */
+function mapSector(sector: string): string | null {
+  const s = sector.toLowerCase()
+  for (const key of Object.keys(SECTOR_CONSTITUENTS)) {
+    if (s.includes(key.toLowerCase()) || key.toLowerCase().includes(s)) return key
+  }
+  // Additional common aliases
+  if (s.includes('semi') || s.includes('chip')) return 'Semiconductors'
+  if (s.includes('defense') || s.includes('aero') || s.includes('space')) return 'Defense/Aerospace'
+  if (s.includes('health') || s.includes('bio') || s.includes('pharma') || s.includes('medical')) return 'Healthcare/Biotech'
+  if (s.includes('tech') || s.includes('software') || s.includes('cloud') || s.includes('saas') || s.includes('information')) return 'Technology'
+  if (s.includes('energy') || s.includes('oil') || s.includes('gas')) return 'Energy'
+  if (s.includes('financ') || s.includes('bank') || s.includes('insurance')) return 'Financials'
+  if (s.includes('consumer') || s.includes('retail') || s.includes('discretion') || s.includes('staple')) return 'Consumer'
+  if (s.includes('industri') || s.includes('manufactur') || s.includes('transport') || s.includes('logistic')) return 'Industrials'
+  if (s.includes('communic') || s.includes('media') || s.includes('telecom')) return 'Communications'
+  return null
+}
+
+/**
+ * Score the target ticker's multiples vs. a curated sector cohort.
+ * Returns percentile (0-100) + sector medians for ps_ttm and ev_ebitda.
+ * Returns null when: the sector doesn't map, or fewer than 2 constituents return valid data.
+ */
+export async function getSectorPositioning(
+  sector: string,
+  targetData: Partial<StockDataResult>,
+): Promise<{ percentile: number; medianPs: number; medianEvEbitda: number } | null> {
+  const bucket = mapSector(sector)
+  if (!bucket) return null
+
+  const tickers = SECTOR_CONSTITUENTS[bucket]
+
+  try {
+    const results: (Partial<StockDataResult> | null)[] = await Promise.allSettled(
+      tickers.map(t => getStockData(t).catch(() => null)),
+    ).then(rs => rs.map(r => (r.status === 'fulfilled' ? r.value : null)))
+
+    const valid = results.filter(Boolean) as Partial<StockDataResult>[]
+    if (valid.length < 2) return null
+
+    const psTtms    = valid.map(d => d?.ps_ttm).filter(v => v != null && v > 0) as number[]
+    const evEbitdas = valid.map(d => d?.ev_ebitda).filter(v => v != null && v > 0) as number[]
+
+    const medianPs      = computeMedian(psTtms) ?? 0
+    const medianEvEbitda = computeMedian(evEbitdas) ?? 0
+
+    // Composite percentile — average of ps_ttm rank and ev_ebitda rank (skip -1 sentinels)
+    const ranks = [
+      computeRank(targetData.ps_ttm, psTtms),
+      computeRank(targetData.ev_ebitda, evEbitdas),
+    ].filter(r => r >= 0)
+
+    if (ranks.length === 0) return null
+    const percentile = Math.round(ranks.reduce((a, b) => a + b, 0) / ranks.length)
+
+    return { percentile, medianPs, medianEvEbitda }
+  } catch (e) {
+    console.error('[peers] getSectorPositioning error:', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
+/**
+ * Score the target ticker's P/E vs. a broad-market proxy basket.
+ * Returns percentile (0-100) + basket median P/E.
+ * Returns null when fewer than 2 basket members return valid PE data.
+ */
+export async function getMarketPositioning(
+  targetData: Partial<StockDataResult>,
+): Promise<{ percentile: number; medianPe: number } | null> {
+  try {
+    const results: (Partial<StockDataResult> | null)[] = await Promise.allSettled(
+      BROAD_MARKET_BASKET.map(t => getStockData(t).catch(() => null)),
+    ).then(rs => rs.map(r => (r.status === 'fulfilled' ? r.value : null)))
+
+    const pes = results
+      .filter(Boolean)
+      .map(d => d?.pe_trailing)
+      .filter(v => v != null && v > 0 && v < 1000) as number[] // cap outliers
+
+    if (pes.length < 2) return null
+
+    const medianPe   = computeMedian(pes) ?? 0
+    const percentile = computeRank(targetData.pe_trailing, pes)
+
+    if (percentile < 0) return null
+    return { percentile, medianPe }
+  } catch (e) {
+    console.error('[peers] getMarketPositioning error:', e instanceof Error ? e.message : e)
+    return null
+  }
 }

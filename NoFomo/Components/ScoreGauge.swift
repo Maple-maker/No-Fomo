@@ -142,8 +142,7 @@ struct TripleSignalBadge: View {
                 .font(DS.Font.mono(10))
                 .foregroundColor(DS.Color.tier1)
         }
-        .padding(.horizontal, 8)
-        .padding(.leading, 7)
+        .padding(.horizontal, 9)
         .frame(height: 22)
         .background(DS.Color.tier1.opacity(0.16))
         .overlay(

@@ -63,6 +63,23 @@ enum DS {
     static let paddingCard: CGFloat = 17
     static let paddingCompact: CGFloat = 14
     static let paddingScreen: CGFloat = 20
+
+    // MARK: Touch targets
+    /// Minimum tap area per HIG (44 × 44 pt)
+    static let minTouchTarget: CGFloat = 44
+
+    // MARK: Vertical rhythm — section separators
+    /// Vertical gap above a section's content (after the header label)
+    static let sectionTopPad: CGFloat = 16
+    /// Vertical gap below a section's content
+    static let sectionBottomPad: CGFloat = 18
+
+    // MARK: Animation — centralised so every state change matches
+    enum Animation {
+        static let micro  = SwiftUI.Animation.easeInOut(duration: 0.15)   // pressed states
+        static let quick  = SwiftUI.Animation.easeInOut(duration: 0.20)   // toggles, chips
+        static let spring = SwiftUI.Animation.spring(response: 0.28, dampingFraction: 0.75)
+    }
 }
 
 // MARK: — Color hex init

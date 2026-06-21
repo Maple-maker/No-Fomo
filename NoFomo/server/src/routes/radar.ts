@@ -10,16 +10,35 @@ import { getInsiderData, type InsiderResult } from '../tools/insider'
 import { getSupabaseAdmin } from '../lib/supabase'
 import { extractJsonBlock, buildRadarRow } from '../lib/opportunity'
 import { selectMode } from '../agents/tiers'
-import { runCouncil } from './council'
+import { runCouncil, runWallStreet } from './council'
 import type { CouncilVerdict, CIOArbiter } from '../agents/types'
+import type { ValuationSnapshot, WallStreetSnapshot } from '../lib/opportunity'
+import { notifyIfQualifying } from '../lib/pushNotify'
+import { getSectorPositioning, getMarketPositioning } from '../lib/peers'
 import { computeSignals } from '../lib/signals'
 import { tagThemes } from '../lib/themes'
 import { getPeerPositioning } from '../lib/peers'
-import { getStockData } from '../lib/stockData'
+import { getStockData, fetchChartPayload, ensureChartHistory, MIN_CHART_FLOOR } from '../lib/stockData'
 import { evaluateAsymmetry } from '../lib/asymmetryDecay'
 import { computeConfidence } from '../lib/confidence'
+import { runRadarV2Shadow } from '../lib/radarV2Shadow'
 
 const router = Router()
+
+router.get('/chart', async (req: Request, res: Response) => {
+  const ticker = String(req.query.ticker || '').toUpperCase().trim()
+  if (!ticker) {
+    res.status(400).json({ error: 'ticker query param required' })
+    return
+  }
+  try {
+    const payload = await fetchChartPayload(ticker)
+    res.json(payload)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    res.status(500).json({ error: message })
+  }
+})
 
 function extractSourcesFromText(text: string): { label: string; url: string }[] {
   const urlRegex = /https?:\/\/[^\s\)\]\"\'<>]+/g
@@ -97,7 +116,7 @@ DOSSIER FORMAT:
 One paragraph investment thesis.
 
 \`\`\`json
-{"ticker":"$TICKER","companyName":"Full Company Name","sector":"Industry","detectionLane":"lane","tier":2,"score":70,"tripleSignal":false,"bluf":"One sentence thesis","price":0,"upside":50,"marketCap":"$XB","probability":60,"catalyst":"catalyst description","buyZones":{"aggressive":0,"base":0,"conservative":0},"bullCase":"bull thesis","bearCase":"bear thesis","financials":[["Revenue","$X"],["Gross Margin","X%"]],"redFlags":["Risk 1","Risk 2"],"invalidation":"What breaks the thesis","competitiveAdvantages":"Full competitive advantages analysis text (3-4 moat pillars with specific numbers)","investmentRisks":"Full investment risks analysis text (3-4 risks ranked by severity with data)","keyMetrics":{"revenue":"$X","netIncome":"$X","eps":"$X.XX","peTrailing":"Xx","peForward":"Xx","evEbitda":"Xx","grossMargin":"X%","operatingMargin":"X%","cashAndEquivalents":"$X","totalDebt":"$X","dividendYield":"X%"}}
+{"ticker":"$TICKER","companyName":"Full Company Name","sector":"Industry","detectionLane":"lane","tier":2,"score":70,"tripleSignal":false,"bluf":"One sentence thesis","price":0,"upside":50,"marketCap":"$XB","probability":60,"catalyst":"catalyst description","buyZones":{"aggressive":0,"base":0,"conservative":0},"bullCase":"bull thesis","bearCase":"bear thesis","financials":[["Revenue (TTM)","$X"],["Net Income","$X"],["EPS","$X.XX"],["FCF","$X"],["Cash","$X"],["Total Debt","$X"]],"redFlags":["Risk 1","Risk 2"],"invalidation":"What breaks the thesis","competitiveAdvantages":"Full competitive advantages analysis text (3-4 moat pillars with specific numbers)","investmentRisks":"Full investment risks analysis text (3-4 risks ranked by severity with data)","keyMetrics":{"peTrailing":"Xx","peForward":"Xx","evEbitda":"Xx","grossMargin":"X%","operatingMargin":"X%","dividendYield":"X%","beta":"X.X"}}
 \`\`\``
 
 router.post('/', async (req: Request, res: Response) => {
@@ -195,6 +214,7 @@ router.post('/', async (req: Request, res: Response) => {
     let enrichment: TickerEnrichment | null = null
     let insiderResult: InsiderResult | null = null
     let peerPositioning: any = null
+    let stockDataForValuation: any = null   // reuse getStockData result for valuation assembly
     try {
       ;[enrichment, insiderResult] = await Promise.all([
         fullEnrich(ticker),
@@ -206,11 +226,14 @@ router.post('/', async (req: Request, res: Response) => {
         enrichment.tags = tagThemes(enrichment.ticker)
       }
 
-      // Compute peer positioning using stock data
+      // Compute peer positioning using stock data — also keep a reference for valuation assembly
       if (enrichment) {
         try {
           const sd = await getStockData(ticker)
-          if (sd) peerPositioning = await getPeerPositioning(ticker, sd)
+          if (sd) {
+            stockDataForValuation = sd
+            peerPositioning = await getPeerPositioning(ticker, sd)
+          }
           if (peerPositioning) console.log(`[radar] Peer positioning: ${peerPositioning.verdict} (${peerPositioning.percentileRank}th percentile)`)
         } catch (e) {
           console.error('[radar] Peer positioning failed:', e instanceof Error ? e.message : e)
@@ -221,6 +244,14 @@ router.post('/', async (req: Request, res: Response) => {
       if (insiderResult) console.log(`[radar] Insider: ${insiderResult.signal}`)
     } catch (e) {
       console.error(`[radar] Enrichment failed for ${ticker}:`, e instanceof Error ? e.message : e)
+    }
+
+    if (enrichment && (enrichment.priceHistory?.length ?? 0) < MIN_CHART_FLOOR) {
+      const chart = await ensureChartHistory(ticker)
+      if (chart.closes.length >= MIN_CHART_FLOOR) {
+        enrichment.priceHistory = chart.closes.map(c => Math.round(c * 100) / 100)
+        console.log(`[radar] ${ticker}: patched chart history (${enrichment.priceHistory.length} points)`)
+      }
     }
 
     // Auto-select council mode based on signal strength
@@ -251,6 +282,17 @@ router.post('/', async (req: Request, res: Response) => {
       peerPositioning,
     )
 
+    let radarV2Shadow = null
+    try {
+      radarV2Shadow = await runRadarV2Shadow(ticker)
+      const first = radarV2Shadow?.results?.[0]
+      if (first) {
+        console.log(`[radar-v2] shadow ${ticker}: score=${first.radar_score} gate=${first.gate_pass} signals=${first.signals.length}`)
+      }
+    } catch (e) {
+      console.warn('[radar-v2] shadow failed:', e instanceof Error ? e.message : e)
+    }
+
     // ── Asymmetry decay: is the window still open, or has this become consensus? ──
     const asymmetry = evaluateAsymmetry({
       marketCap: enrichment?.marketCap ?? structured.marketCap,
@@ -280,11 +322,113 @@ router.post('/', async (req: Request, res: Response) => {
     const dataFreshness = new Date().toISOString()
     console.log(`[radar] Confidence: ${confidence.score} (${confidence.label}) — ${confidence.factors.join(', ')}`)
 
+    // ── Valuation assembly (DCF + relative: vs peers, sector, market) ────────
+    let valuationSnapshot: ValuationSnapshot | null = null
+    let wallStreetSnapshot: WallStreetSnapshot | null = null
+    try {
+      const dcfResult = enrichment?.dcfValuation ?? null
+      const dcfBlock: ValuationSnapshot['dcf'] = dcfResult
+        ? {
+            intrinsic: dcfResult.intrinsicPerShare,
+            upsidePct: dcfResult.upsidePct,
+            verdict: dcfResult.verdict,
+            buyBelow: dcfResult.buyBelow,
+            bear: dcfResult.bearValue,
+            base: dcfResult.baseValue,
+            bull: dcfResult.bullValue,
+            growthUsed: dcfResult.growthUsed,
+          }
+        : null
+
+      // Sector + market positioning — parallel fetches
+      const sectorStr = enrichment?.sector ?? structured.sector ?? ''
+      const [sectorPos, marketPos] = await Promise.all([
+        sectorStr && stockDataForValuation
+          ? getSectorPositioning(sectorStr, stockDataForValuation).catch(() => null)
+          : Promise.resolve(null),
+        stockDataForValuation
+          ? getMarketPositioning(stockDataForValuation).catch(() => null)
+          : Promise.resolve(null),
+      ])
+
+      if (sectorPos) console.log(`[radar] Sector positioning (${sectorStr}): ${sectorPos.percentile}th pct, medianPs=${sectorPos.medianPs.toFixed(1)}x`)
+      if (marketPos) console.log(`[radar] Market positioning: ${marketPos.percentile}th pct, medianPe=${marketPos.medianPe.toFixed(1)}x`)
+
+      // Composite verdict rule
+      const peerVerdict = peerPositioning?.verdict ?? null
+      let composite: ValuationSnapshot['composite_verdict'] = 'fair'
+      if (
+        dcfBlock?.verdict === 'undervalued' ||
+        (peerVerdict === 'cheap_growth' && sectorPos && sectorPos.percentile < 40)
+      ) {
+        composite = 'undervalued'
+      } else if (
+        dcfBlock?.verdict === 'overvalued' ||
+        ((peerVerdict === 'expensive' || peerVerdict === 'value_trap') && sectorPos && sectorPos.percentile > 70)
+      ) {
+        composite = 'overvalued'
+      }
+
+      valuationSnapshot = {
+        dcf: dcfBlock,
+        relative: {
+          vs_peers: peerPositioning
+            ? { percentile: peerPositioning.percentileRank, verdict: peerPositioning.verdict }
+            : null,
+          vs_sector: sectorPos
+            ? { percentile: sectorPos.percentile, medianPs: sectorPos.medianPs, medianEvEbitda: sectorPos.medianEvEbitda }
+            : null,
+          vs_market: marketPos
+            ? { percentile: marketPos.percentile, medianPe: marketPos.medianPe }
+            : null,
+        },
+        composite_verdict: composite,
+      }
+      console.log(`[radar] Valuation snapshot: composite=${composite} dcf=${dcfBlock?.verdict ?? 'n/a'}`)
+    } catch (e) {
+      console.error('[radar] Valuation assembly failed:', e instanceof Error ? e.message : e)
+    }
+
+    // ── Wall Street analyst — independent of CIO, reads dossier directly ─────
+    // Rate-limit stagger (matches the existing 2-3s pattern between council calls)
+    await new Promise(r => setTimeout(r, 3000))
+    try {
+      const wsAnalysis = await runWallStreet(finalText, valuationSnapshot)
+      wallStreetSnapshot = {
+        moat_score: wsAnalysis.moatScore,
+        upside_score: wsAnalysis.upsideScore,
+        market_condition_score: wsAnalysis.marketConditionScore,
+        comp_adv_score: wsAnalysis.compAdvScore,
+        moat_rationale: wsAnalysis.moatRationale,
+        upside_rationale: wsAnalysis.upsideRationale,
+        market_condition_rationale: wsAnalysis.marketConditionRationale,
+        comp_adv_rationale: wsAnalysis.compAdvRationale,
+        thesis: wsAnalysis.thesis,
+      }
+      console.log(`[radar] Wall Street: moat=${wsAnalysis.moatScore} upside=${wsAnalysis.upsideScore} mktCond=${wsAnalysis.marketConditionScore} compAdv=${wsAnalysis.compAdvScore}`)
+    } catch (e) {
+      console.error('[radar] Wall Street analyst failed:', e instanceof Error ? e.message : e)
+    }
+
+    // Build the thesis-level source list BEFORE persisting so it lands in data_snapshot.
+    // (Previously this ran AFTER the insert and was only returned in the HTTP response —
+    //  so data_snapshot.sources was empty on every row. "A signal needs a link.")
+    const webSources = extractSourcesFromText(finalText + ' ' + allSourceUrls.join(' '))
+    const quiverSourceUrls = enrichment?.quiver ? formatSources(enrichment.quiver).map(s => ({ label: s.label, url: s.url })) : []
+    const headlineUrls = (enrichment?.headlines || []).map(h => ({ label: h.headline.slice(0, 80), url: h.url }))
+    const seenUrls = new Set(webSources.map(s => s.url))
+    const allSources = [
+      ...webSources,
+      ...quiverSourceUrls.filter(s => !seenUrls.has(s.url)),
+      ...headlineUrls.filter(s => !seenUrls.has(s.url)),
+    ]
+    const sourcePairs: string[][] = allSources.map(s => [s.label, s.url])
+
     const row = buildRadarRow(
       structured,
       councilResult?.bull ?? { verdict: 'BULL', reasoning: '' },
       councilResult?.bear ?? { verdict: 'BEAR', reasoning: '' },
-      councilResult?.neutral ?? { verdict: 'BULL', synthesis: '', tier: structured.tier, score: structured.score, tripleSignal: structured.tripleSignal, asymmetry: 5, conviction: 5, catalyst: 5, management: 5 },
+      councilResult?.neutral ?? { verdict: 'BULL', synthesis: '', tier: structured.tier, score: structured.score, tripleSignal: structured.tripleSignal, asymmetry: 0, conviction: 0, catalyst: 0, management: 0, asymmetryRationale: '', convictionRationale: '', catalystRationale: '', managementRationale: '', consensus_risk: false },
       enrichment ? {
         priceHistory: enrichment.priceHistory,
         rsiValue: enrichment.indicators?.rsi.value,
@@ -300,6 +444,12 @@ router.post('/', async (req: Request, res: Response) => {
         avgPriceTarget: enrichment.analyst?.targetMean || 0,
         recentAnalystActions: [],
         councilSummary: councilResult?.summary || '',
+        sources: sourcePairs,
+        // Real key-metrics from Yahoo (stockDataForValuation) — populates P/S, P/FCF, rev growth, short %
+        keyMetricsPsTtm: stockDataForValuation?.ps_ttm != null ? `${stockDataForValuation.ps_ttm.toFixed(1)}x` : '',
+        keyMetricsPfcf: stockDataForValuation?.pfcf != null ? `${stockDataForValuation.pfcf.toFixed(1)}x` : '',
+        keyMetricsRevGrowth: stockDataForValuation?.rev_growth_yoy != null ? `${stockDataForValuation.rev_growth_yoy.toFixed(1)}%` : '',
+        keyMetricsShortPct: stockDataForValuation?.short_pct != null ? `${stockDataForValuation.short_pct.toFixed(1)}%` : '',
         // Insider data
         insiderTotalBuys: insiderResult?.totalBuys ?? 0,
         insiderTotalSells: insiderResult?.totalSells ?? 0,
@@ -323,6 +473,9 @@ router.post('/', async (req: Request, res: Response) => {
         tags: enrichment.tags,
         peerPercentileRank: peerPositioning?.percentileRank,
         peerVerdict: peerPositioning?.verdict,
+        peerComparison: peerPositioning?.table,
+        valuation: valuationSnapshot ?? undefined,
+        wallStreet: wallStreetSnapshot ?? undefined,
         contrarian: signals.contrarian,
         smartMoneyScore: Math.round(signals.smartMoney / 10),        // 0–100 → 1–10
         governmentScore: Math.round(signals.government / 10),        // 0–100 → 1–10
@@ -372,25 +525,34 @@ router.post('/', async (req: Request, res: Response) => {
         asymmetryOpenScore: asymmetry.openScore,
         asymmetryDecayReasons: asymmetry.reasons,
         expiresAt: asymmetry.expiresAt,
+        radarV2Shadow,
       } : {
-        // Even without enrichment, record the window status.
+        // Even without enrichment, record the window status + sources.
+        sources: sourcePairs,
         windowStatus: asymmetry.status,
         asymmetryOpenScore: asymmetry.openScore,
         asymmetryDecayReasons: asymmetry.reasons,
         expiresAt: asymmetry.expiresAt,
+        radarV2Shadow,
       },
     )
 
-    // Add confidence fields to the persisted row
-    ;(row as any).confidence_score = confidence.score
-    ;(row as any).confidence_label = confidence.label
-    ;(row as any).data_freshness = dataFreshness
+    // Persist confidence into the data_snapshot jsonb — these are NOT top-level
+    // columns on radar_opportunities, so writing them at the top level makes the
+    // entire insert fail ("Could not find the 'confidence_label' column").
+    ;(row.data_snapshot as any).confidence_score = confidence.score
+    ;(row.data_snapshot as any).confidence_label = confidence.label
+    ;(row.data_snapshot as any).data_freshness = dataFreshness
 
     let persisted = false
+    const chartLen = enrichment?.priceHistory?.length ?? 0
+    const chartGateFailed = chartLen < MIN_CHART_FLOOR
     if (!skipPersist && supabase) {
       // Delete existing entries for this ticker (prevents duplicates + prunes if now closed)
       await supabase.from('radar_opportunities').delete().eq('ticker', ticker)
-      if (asymmetry.status === 'closed') {
+      if (chartGateFailed) {
+        console.warn(`[radar] ${ticker}: skipping persist — chart history too short (${chartLen} points)`)
+      } else if (asymmetry.status === 'closed') {
         // Window has closed — do NOT keep a consensus / fully-valued name on the active radar.
         console.log(`[radar] ${ticker} window CLOSED — pruned from active radar: ${asymmetry.reasons.join('; ')}`)
       } else {
@@ -398,7 +560,10 @@ router.post('/', async (req: Request, res: Response) => {
         const { error } = await supabase.from('radar_opportunities').insert(row as any)
         if (error) { res.status(500).json({ error: 'Supabase write failed', detail: error.message }); return }
         persisted = true
-        // Fire push notifications for Tier 1/2 discoveries (non-blocking)
+        // APNs device push for qualifying Tier 1/2 discoveries (non-blocking; no-ops if APNs env unset).
+        // notifyIfQualifying applies the full notify policy internally (Tier 1 always; Tier 2 if catalyst>=8 or all dims>=7).
+        notifyIfQualifying(row).catch(e => console.warn('[radar] APNs push failed:', e))
+        // Existing ntfy channel — Fire push notifications for Tier 1/2 discoveries (non-blocking)
         if (row.tier <= 2) {
           import('./notify').then(m => m.dispatchNotifications({
             ticker,
@@ -416,17 +581,6 @@ router.post('/', async (req: Request, res: Response) => {
         })).catch(e => console.warn('[radar] thesis check failed:', e))
       }
     }
-
-    // Merge all sources, deduplicate by URL
-    const webSources = extractSourcesFromText(finalText + ' ' + allSourceUrls.join(' '))
-    const quiverSourceUrls = enrichment?.quiver ? formatSources(enrichment.quiver).map(s => ({ label: s.label, url: s.url })) : []
-    const headlineUrls = (enrichment?.headlines || []).map(h => ({ label: h.headline.slice(0, 80), url: h.url }))
-    const seenUrls = new Set(webSources.map(s => s.url))
-    const allSources = [
-      ...webSources,
-      ...quiverSourceUrls.filter(s => !seenUrls.has(s.url)),
-      ...headlineUrls.filter(s => !seenUrls.has(s.url)),
-    ]
 
     res.json({
       ticker, tier: row.tier, score: row.overall_score,
@@ -460,6 +614,7 @@ router.post('/', async (req: Request, res: Response) => {
 
       // ── Composite signal score ──
       signals,
+      radarV2Shadow,
 
       // ── Comprehensive enrichment ──
       analyst: enrichment?.analyst || null,

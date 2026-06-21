@@ -10,6 +10,7 @@
 import { Router, type Request, type Response } from 'express'
 import { getSupabaseAdmin } from '../lib/supabase'
 import { evaluateAsymmetry, isExpired, type AsymmetryInput } from '../lib/asymmetryDecay'
+import { backfillCharts } from '../lib/backfillCharts'
 
 const router = Router()
 const CRON_SECRET = process.env.CRON_SECRET || 'nofomo-cron-dev'
@@ -73,11 +74,18 @@ async function handleSweep(req: Request, res: Response) {
       console.log(`[sweep] Pruned ${deleted} closed/stale opportunities: ${tickers.join(', ')}`)
     }
 
+    let chartBackfill = null
+    if (req.query.backfill_charts === '1' || req.body?.backfill_charts) {
+      const chartDryRun = req.query.chart_dry_run !== '0' && req.body?.chart_dry_run !== false
+      chartBackfill = await backfillCharts(chartDryRun)
+    }
+
     res.json({
       sweptAt: new Date().toISOString(), dryRun, total: rows.length,
       kept: keep.length, prunedCount: prune.length, deleted,
       prune: prune.sort((a, b) => a.openScore - b.openScore),
       keep: keep.sort((a, b) => b.openScore - a.openScore),
+      chartBackfill,
       note: dryRun ? 'Dry run — nothing deleted. POST { dry_run:false, secret } to apply.' : `Pruned ${deleted} opportunities whose asymmetry window has closed.`,
     })
   } catch (err) {

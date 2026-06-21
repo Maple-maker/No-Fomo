@@ -31,7 +31,7 @@ async function fetchPostings(companyName: string, freshness: 'pw' | 'pm'): Promi
   if (!braveKey) return []
   const query = `"${companyName}" hiring jobs (site:linkedin.com OR site:indeed.com)`
   const res = await fetch(
-    `${BRAVE_WEB}?q=${encodeURIComponent(query)}&count=50&freshness=${freshness}`,
+    `${BRAVE_WEB}?q=${encodeURIComponent(query)}&count=20&freshness=${freshness}`,
     {
       headers: { Accept: 'application/json', 'User-Agent': USER_AGENT, 'X-Subscription-Token': braveKey },
       signal: AbortSignal.timeout(9000),

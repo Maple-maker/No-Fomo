@@ -21,10 +21,10 @@ final class SupabaseService {
         session = URLSession(configuration: config)
     }
 
-    // MARK: - Feed (reads from radar_opportunities table)
+    // MARK: - Feed (reads from radar_feed_public view — readable by anon, contains all fields)
 
     func fetchFeed(isPremium: Bool, limit: Int = 20, offset: Int = 0) async throws -> [Opportunity] {
-        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/radar_opportunities"), resolvingAgainstBaseURL: false)!
+        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/radar_feed_public"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "select", value: "*"),
             URLQueryItem(name: "order", value: "created_at.desc"),
@@ -32,7 +32,7 @@ final class SupabaseService {
             URLQueryItem(name: "offset", value: "\(offset)"),
         ]
         var req = URLRequest(url: components.url!)
-        req.addCommonHeaders()
+        req.addPublicHeaders()
         let (data, response) = try await session.data(for: req)
         try validate(response: response, data: data)
         let decoder = JSONDecoder()
@@ -51,10 +51,10 @@ final class SupabaseService {
     }
 
     func fetchOpportunity(id: Int) async throws -> Opportunity {
-        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/radar_opportunities"), resolvingAgainstBaseURL: false)!
+        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/radar_feed_public"), resolvingAgainstBaseURL: false)!
         components.queryItems = [URLQueryItem(name: "id", value: "eq.\(id)")]
         var req = URLRequest(url: components.url!)
-        req.addCommonHeaders()
+        req.addPublicHeaders()
         let (data, response) = try await session.data(for: req)
         try validate(response: response, data: data)
         let decoder = JSONDecoder()
@@ -169,6 +169,81 @@ final class SupabaseService {
         let (_, response) = try await session.data(for: req)
         try validate(response: response, data: nil)
     }
+
+    // MARK: - Community trade ideas (reads Supabase directly — no server deploy required)
+
+    func fetchTradeIdeas(limit: Int = 30) async throws -> [TradeIdea] {
+        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/trade_ideas"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [
+            URLQueryItem(name: "select", value: "*"),
+            URLQueryItem(name: "status", value: "in.(open,won,lost)"),
+            URLQueryItem(name: "order", value: "created_at.desc"),
+            URLQueryItem(name: "limit", value: "\(limit)"),
+        ]
+        var req = URLRequest(url: components.url!)
+        req.addPublicHeaders()
+        let (data, response) = try await session.data(for: req)
+        try validate(response: response, data: data)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let rows = try decoder.decode([TradeIdea].self, from: data)
+        return try await attachProfiles(to: rows)
+    }
+
+    func fetchLeaderboard(limit: Int = 20) async throws -> [LeaderboardEntry] {
+        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/user_profiles"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [
+            URLQueryItem(name: "select", value: "*"),
+            URLQueryItem(name: "order", value: "reputation_score.desc"),
+            URLQueryItem(name: "limit", value: "\(limit)"),
+        ]
+        var req = URLRequest(url: components.url!)
+        req.addPublicHeaders()
+        let (data, response) = try await session.data(for: req)
+        try validate(response: response, data: data)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode([LeaderboardEntry].self, from: data)
+    }
+
+    private func attachProfiles(to ideas: [TradeIdea]) async throws -> [TradeIdea] {
+        let userIds = Array(Set(ideas.map(\.userId)))
+        guard !userIds.isEmpty else { return ideas }
+
+        let idList = userIds.joined(separator: ",")
+        var components = URLComponents(url: baseURL.appendingPathComponent("/rest/v1/user_profiles"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [
+            URLQueryItem(name: "select", value: "user_id,display_name,avatar_url,reputation_score,current_streak"),
+            URLQueryItem(name: "user_id", value: "in.(\(idList))"),
+        ]
+        var req = URLRequest(url: components.url!)
+        req.addPublicHeaders()
+        let (data, response) = try await session.data(for: req)
+        try validate(response: response, data: data)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let profiles = try decoder.decode([TradeIdeaProfile].self, from: data)
+        let byUser = Dictionary(uniqueKeysWithValues: profiles.map { ($0.userId, $0) })
+
+        return ideas.map { idea in
+            TradeIdea(
+                id: idea.id,
+                userId: idea.userId,
+                ticker: idea.ticker,
+                body: idea.body,
+                direction: idea.direction,
+                entryPrice: idea.entryPrice,
+                targetPrice: idea.targetPrice,
+                timeframeDays: idea.timeframeDays,
+                status: idea.status,
+                performanceScore: idea.performanceScore,
+                upvoteCount: idea.upvoteCount,
+                createdAt: idea.createdAt,
+                resolvedAt: idea.resolvedAt,
+                profile: byUser[idea.userId]
+            )
+        }
+    }
 }
 
 // MARK: - Radar table row (matches radar_opportunities schema)
@@ -180,6 +255,10 @@ struct RadarRow: Codable {
     let overallScore: Double?
     let thesis: String?
     let geminiAnalysis: String?
+    let scoreBreakdown: ScoreBreakdown?
+    let repriceGap: RepriceGap?
+    let councilExplanation: CouncilExplanation?
+    let regimeFlags: [String]?
     let dataSnapshot: Snapshot?
 
     struct Snapshot: Codable {
@@ -196,6 +275,7 @@ struct RadarRow: Codable {
         let bullCase: String?
         let bearCase: String?
         let financials: [[String]]?
+        let keyMetrics: KeyMetricsData?
         let redFlags: [String]?
         let invalidation: String?
         let priceChangePct: Double?
@@ -240,7 +320,23 @@ struct RadarRow: Codable {
         let managementScore: Int?
         let smartMoneyScore: Int?
         let governmentScore: Int?
+        let asymmetryRationale: String?
+        let convictionRationale: String?
+        let catalystRationale: String?
+        let managementRationale: String?
+        let smartMoneySignal: String?
+        let governmentSignal: String?
         let priceHistory: [Double]?
+        let scoreBreakdown: ScoreBreakdown?
+        let repriceGap: RepriceGap?
+        let councilExplanation: CouncilExplanation?
+        let regimeFlags: [String]?
+        // ── Valuation + Wall-Street (Phase 0) ──
+        let valuation: Valuation?
+        let wallStreet: WallStreet?
+        let peerComparison: [PeerCompany]?
+        let peerPercentileRank: Int?
+        let peerVerdict: String?
     }
 
     struct CouncilData: Codable {
@@ -282,6 +378,7 @@ struct RadarRow: Codable {
         let bc = snap?.bullCase ?? ""
         let bear = snap?.bearCase ?? ""
         let fin = snap?.financials ?? []
+        let km = snap?.keyMetrics
         let rf = snap?.redFlags ?? []
         let inv = snap?.invalidation ?? ""
         let pcp = snap?.priceChangePct ?? 0
@@ -327,10 +424,14 @@ struct RadarRow: Codable {
         let mgmt = snap?.managementScore ?? 0
         let sms = snap?.smartMoneyScore
         let ph = snap?.priceHistory
+        let v2Score = scoreBreakdown ?? snap?.scoreBreakdown
+        let v2Reprice = repriceGap ?? snap?.repriceGap ?? v2Score?.repriceGap
+        let v2Council = councilExplanation ?? snap?.councilExplanation
+        let v2Flags = regimeFlags ?? snap?.regimeFlags ?? v2Score?.regimeFlags ?? []
 
         return Opportunity(
             id: idStr, ticker: ticker, companyName: coName, sector: sect,
-            tier: t, score: sc, tripleSignal: ts, bluf: th,
+            tier: t, score: v2Score?.radarScore ?? sc, tripleSignal: v2Score?.confluence?.tripleSignal ?? ts, bluf: th,
             price: pr, upside: up, marketCap: mc, probability: prob,
             catalyst: cat, council: council, buyZones: zones,
             bullCase: bc, bearCase: bear, financials: fin,
@@ -352,7 +453,16 @@ struct RadarRow: Codable {
             businessModelSummary: bms, macroContext: mcx,
             insiderActivity: ia, governmentSupport: gs,
             indirectCatalysts: ic, overlookedAnalysis: oa,
-            detectionLane: dl, governmentScore: gsc
+            detectionLane: dl, governmentScore: gsc,
+            scoreBreakdown: v2Score, repriceGap: v2Reprice,
+            councilExplanation: v2Council, regimeFlags: v2Flags,
+            keyMetrics: km,
+            asymmetryRationale: snap?.asymmetryRationale, convictionRationale: snap?.convictionRationale,
+            catalystRationale: snap?.catalystRationale, managementRationale: snap?.managementRationale,
+            smartMoneySignal: snap?.smartMoneySignal, governmentSignal: snap?.governmentSignal,
+            valuation: snap?.valuation, wallStreet: snap?.wallStreet,
+            peerComparison: snap?.peerComparison, peerPercentileRank: snap?.peerPercentileRank,
+            peerVerdict: snap?.peerVerdict
         )
     }
 
@@ -371,6 +481,10 @@ extension Opportunity {
             overallScore: score,
             thesis: bluf,
             geminiAnalysis: council.cio.rawValue,
+            scoreBreakdown: scoreBreakdown,
+            repriceGap: repriceGap,
+            councilExplanation: councilExplanation,
+            regimeFlags: regimeFlags,
             dataSnapshot: RadarRow.Snapshot(
                 companyName: companyName,
                 sector: sector,
@@ -393,6 +507,7 @@ extension Opportunity {
                 bullCase: bullCase,
                 bearCase: bearCase,
                 financials: financials,
+                keyMetrics: keyMetrics,
                 redFlags: redFlags,
                 invalidation: invalidation,
                 priceChangePct: priceChangePct,
@@ -437,7 +552,22 @@ extension Opportunity {
                 managementScore: managementScore,
                 smartMoneyScore: smartMoneyScore,
                 governmentScore: governmentScore,
-                priceHistory: priceHistory
+                asymmetryRationale: asymmetryRationale,
+                convictionRationale: convictionRationale,
+                catalystRationale: catalystRationale,
+                managementRationale: managementRationale,
+                smartMoneySignal: smartMoneySignal,
+                governmentSignal: governmentSignal,
+                priceHistory: priceHistory,
+                scoreBreakdown: scoreBreakdown,
+                repriceGap: repriceGap,
+                councilExplanation: councilExplanation,
+                regimeFlags: regimeFlags,
+                valuation: valuation,
+                wallStreet: wallStreet,
+                peerComparison: peerComparison,
+                peerPercentileRank: peerPercentileRank,
+                peerVerdict: peerVerdict
             )
         )
     }
@@ -446,16 +576,29 @@ extension Opportunity {
 // MARK: - Helpers
 
 private extension URLRequest {
+    mutating func addPublicHeaders() {
+        setValue("application/json", forHTTPHeaderField: "Content-Type")
+        setValue("application/json", forHTTPHeaderField: "Accept")
+        setValue(SUPABASE_ANON_KEY, forHTTPHeaderField: "apikey")
+        setValue("Bearer \(SUPABASE_ANON_KEY)", forHTTPHeaderField: "Authorization")
+    }
+
     mutating func addCommonHeaders() {
         setValue("application/json", forHTTPHeaderField: "Content-Type")
         setValue("application/json", forHTTPHeaderField: "Accept")
         setValue(SUPABASE_ANON_KEY, forHTTPHeaderField: "apikey")
-        // Read from Keychain (auth moved from UserDefaults in prior migration)
-        let bearer = keychainLoad(key: "auth_token") ?? SUPABASE_ANON_KEY
-        // Never forward anonymous or server-internal tokens to Supabase
-        let safeBearer = (bearer == "anon") ? SUPABASE_ANON_KEY : bearer
-        setValue("Bearer \(safeBearer)", forHTTPHeaderField: "Authorization")
+        setValue("Bearer \(supabaseBearer())", forHTTPHeaderField: "Authorization")
     }
+}
+
+private func supabaseBearer() -> String {
+    guard let bearer = keychainLoad(key: "auth_token"),
+          bearer != "anon",
+          bearer != "dev-skip-token",
+          bearer.split(separator: ".").count == 3 else {
+        return SUPABASE_ANON_KEY
+    }
+    return bearer
 }
 
 private func keychainLoad(key: String) -> String? {

@@ -1,4 +1,59 @@
 import type { StructuredOpportunity, CouncilVerdict, GrokVerdict, CIOArbiter } from '../agents/types'
+import type { PeerCompany } from './peers'
+
+// ── data_snapshot field contract: Valuation + Wall-Street analysis ──
+// Frozen shape that backend (WP-D) populates and iOS (WP-E) decodes.
+// All fields null-safe — a thin-data run leaves these undefined/null, never fabricated.
+export interface ValuationSnapshot {
+  // Intrinsic value from discounted cash flow (server/src/lib/dcfValuation.ts runDCF).
+  dcf: {
+    intrinsic: number
+    upsidePct: number
+    verdict: 'undervalued' | 'fairly_valued' | 'overvalued'
+    buyBelow: number
+    bear: number
+    base: number
+    bull: number
+    growthUsed: number
+  } | null
+  // Relative value: how the multiple stacks up vs direct peers, sector, and the broad market.
+  relative: {
+    vs_peers: { percentile: number; verdict: string } | null   // from peers.ts getPeerPositioning
+    vs_sector: { percentile: number; medianPs: number; medianEvEbitda: number } | null
+    vs_market: { percentile: number; medianPe: number } | null
+  }
+  composite_verdict: 'undervalued' | 'fair' | 'overvalued'
+}
+
+export interface WallStreetSnapshot {
+  // LLM "Wall Street analyst" take — each score 1-10, grounded in the valuation numbers above.
+  moat_score: number
+  upside_score: number
+  market_condition_score: number
+  comp_adv_score: number
+  moat_rationale: string
+  upside_rationale: string
+  market_condition_rationale: string
+  comp_adv_rationale: string
+  thesis: string   // one-paragraph synthesis
+}
+
+const RATIO_LABEL_PATTERNS = [
+  /gross\s*margin/i,
+  /operating\s*margin/i,
+  /\bp\/?e\b/i,
+  /ev\/?ebitda/i,
+  /dividend/i,
+  /^beta$/i,
+  /net\s*debt/i,
+]
+
+export function dedupeFinancials(financials: string[][]): string[][] {
+  return (financials ?? []).filter(row => {
+    const label = String(row?.[0] ?? '')
+    return label.length > 0 && !RATIO_LABEL_PATTERNS.some(rx => rx.test(label))
+  })
+}
 
 type RadarRow = {
   ticker: string
@@ -6,6 +61,10 @@ type RadarRow = {
   overall_score: number
   thesis: string
   gemini_analysis: string
+  score_breakdown?: unknown
+  reprice_gap?: unknown
+  council_explanation?: unknown
+  regime_flags?: string[]
   data_snapshot: {
     company_name: string
     sector: string
@@ -29,6 +88,10 @@ type RadarRow = {
     conviction_score: number
     catalyst_score: number
     management_score: number
+    asymmetry_rationale?: string
+    conviction_rationale?: string
+    catalyst_rationale?: string
+    management_rationale?: string
     analyst_ai_divergence: boolean
     // Qualtrim-style competitive analysis
     competitive_advantages?: string
@@ -36,8 +99,8 @@ type RadarRow = {
     key_metrics?: {
       revenue?: string; net_income?: string; eps?: string
       pe_trailing?: string; pe_forward?: string; ev_ebitda?: string
-      gross_margin?: string; operating_margin?: string
-      cash_and_equivalents?: string; total_debt?: string; dividend_yield?: string
+      gross_margin?: string; operating_margin?: string; dividend_yield?: string; beta?: string
+      ps_ttm?: string; pfcf?: string; rev_growth_yoy?: string; short_pct?: string
     }
     // Insider activity
     insider_total_buys?: number; insider_total_sells?: number
@@ -60,6 +123,12 @@ type RadarRow = {
     avg_price_target?: number
     recent_analyst_actions?: string[][]
     council_summary?: string
+    // Per-model council reasoning (gemini = bull lens, deepseek = bear lens, cio = arbiter synthesis)
+    gemini_reasoning?: string
+    deepseek_reasoning?: string
+    cio_reasoning?: string
+    // Thesis-level evidence links: [label, url] pairs
+    sources?: string[][]
     // New fundamental quality signals
     rev_acceleration?: number | null
     insider_pct?: number | null
@@ -68,6 +137,10 @@ type RadarRow = {
     tags?: string[]
     peer_percentile_rank?: number
     peer_verdict?: string
+    peer_comparison?: PeerCompany[]
+    // ── Valuation (DCF + relative) + Wall-Street analysis · WP-D populates ──
+    valuation?: ValuationSnapshot
+    wall_street?: WallStreetSnapshot
     contrarian_score?: number
     smart_money_score?: number
     government_score?: number
@@ -117,6 +190,7 @@ type RadarRow = {
     asymmetry_open_score?: number       // 0-100; higher = more asymmetry remaining
     asymmetry_decay_reasons?: string[]
     expires_at?: string                 // ISO; auto-prune deadline if not refreshed
+    radar_v2_shadow?: unknown
   }
 }
 
@@ -133,6 +207,11 @@ export function buildRadarRow(
     analystConsensusString?: string; analystCount?: number; avgPriceTarget?: number
     recentAnalystActions?: string[][]
     councilSummary?: string
+    sources?: string[][]
+    keyMetricsPsTtm?: string
+    keyMetricsPfcf?: string
+    keyMetricsRevGrowth?: string
+    keyMetricsShortPct?: string
     // Insider data
     insiderTotalBuys?: number; insiderTotalSells?: number
     insiderBuyVolume?: number; insiderSellVolume?: number
@@ -147,6 +226,9 @@ export function buildRadarRow(
     tags?: string[]
     peerPercentileRank?: number
     peerVerdict?: string
+    peerComparison?: PeerCompany[]
+    valuation?: ValuationSnapshot
+    wallStreet?: WallStreetSnapshot
     contrarian?: number
     smartMoneyScore?: number
     governmentScore?: number
@@ -196,6 +278,11 @@ export function buildRadarRow(
     asymmetryOpenScore?: number
     asymmetryDecayReasons?: string[]
     expiresAt?: string
+    radarV2Shadow?: unknown
+    scoreBreakdown?: unknown
+    repriceGap?: unknown
+    councilExplanation?: unknown
+    regimeFlags?: string[]
   },
 ): RadarRow {
   return {
@@ -204,6 +291,10 @@ export function buildRadarRow(
     overall_score: neutral.score,
     thesis: structured.bluf,
     gemini_analysis: neutral.verdict,
+    score_breakdown: enrichment?.scoreBreakdown,
+    reprice_gap: enrichment?.repriceGap,
+    council_explanation: enrichment?.councilExplanation,
+    regime_flags: enrichment?.regimeFlags,
     data_snapshot: {
       company_name: structured.companyName,
       sector: structured.sector,
@@ -228,30 +319,35 @@ export function buildRadarRow(
       },
       bull_case: structured.bullCase,
       bear_case: structured.bearCase,
-      financials: structured.financials,
+      financials: dedupeFinancials(structured.financials),
       red_flags: structured.redFlags,
       invalidation: structured.invalidation,
       full_report_md: structured.fullReportMd,
-      asymmetry_score: neutral.asymmetry ?? 5,
-      conviction_score: neutral.conviction ?? 5,
-      catalyst_score: neutral.catalyst ?? 5,
-      management_score: neutral.management ?? 5,
+      asymmetry_score: neutral.asymmetry ?? 0,
+      conviction_score: neutral.conviction ?? 0,
+      catalyst_score: neutral.catalyst ?? 0,
+      management_score: neutral.management ?? 0,
+      asymmetry_rationale: neutral.asymmetryRationale ?? '',
+      conviction_rationale: neutral.convictionRationale ?? '',
+      catalyst_rationale: neutral.catalystRationale ?? '',
+      management_rationale: neutral.managementRationale ?? '',
       analyst_ai_divergence: false,
       // Qualtrim-style competitive analysis
       competitive_advantages: structured.competitiveAdvantages || '',
       investment_risks: structured.investmentRisks || '',
       key_metrics: {
-        revenue: structured.keyMetrics?.revenue || '',
-        net_income: structured.keyMetrics?.netIncome || '',
-        eps: structured.keyMetrics?.eps || '',
         pe_trailing: structured.keyMetrics?.peTrailing || '',
         pe_forward: structured.keyMetrics?.peForward || '',
         ev_ebitda: structured.keyMetrics?.evEbitda || '',
         gross_margin: structured.keyMetrics?.grossMargin || '',
         operating_margin: structured.keyMetrics?.operatingMargin || '',
-        cash_and_equivalents: structured.keyMetrics?.cashAndEquivalents || '',
-        total_debt: structured.keyMetrics?.totalDebt || '',
         dividend_yield: structured.keyMetrics?.dividendYield || '',
+        beta: structured.keyMetrics?.beta || '',
+        // Real numbers from Yahoo (getStockData) — LLM keyMetrics only carries the 7 above
+        ps_ttm: enrichment?.keyMetricsPsTtm || '',
+        pfcf: enrichment?.keyMetricsPfcf || '',
+        rev_growth_yoy: enrichment?.keyMetricsRevGrowth || '',
+        short_pct: enrichment?.keyMetricsShortPct || '',
       },
       price_history: enrichment?.priceHistory ?? [],
       rsi_value: enrichment?.rsiValue,
@@ -267,6 +363,11 @@ export function buildRadarRow(
       avg_price_target: enrichment?.avgPriceTarget ?? 0,
       recent_analyst_actions: enrichment?.recentAnalystActions ?? [],
       council_summary: enrichment?.councilSummary ?? '',
+      // Per-model council reasoning — verdicts already carry their reasoning, just persist it
+      gemini_reasoning: bull.reasoning ?? '',
+      deepseek_reasoning: bear.reasoning ?? '',
+      cio_reasoning: neutral.synthesis ?? '',
+      sources: enrichment?.sources ?? [],
       // Insider activity
       insider_total_buys: enrichment?.insiderTotalBuys ?? 0,
       insider_total_sells: enrichment?.insiderTotalSells ?? 0,
@@ -286,6 +387,9 @@ export function buildRadarRow(
       tags: enrichment?.tags ?? [],
       peer_percentile_rank: enrichment?.peerPercentileRank,
       peer_verdict: enrichment?.peerVerdict,
+      peer_comparison: enrichment?.peerComparison,
+      valuation: enrichment?.valuation,
+      wall_street: enrichment?.wallStreet,
       contrarian_score: enrichment?.contrarian,
       smart_money_score: enrichment?.smartMoneyScore,
       government_score: enrichment?.governmentScore,
@@ -331,6 +435,7 @@ export function buildRadarRow(
       asymmetry_open_score: enrichment?.asymmetryOpenScore,
       asymmetry_decay_reasons: enrichment?.asymmetryDecayReasons,
       expires_at: enrichment?.expiresAt,
+      radar_v2_shadow: enrichment?.radarV2Shadow,
     },
   }
 }
@@ -386,7 +491,7 @@ export function extractJsonBlock(text: string): StructuredOpportunity | null {
       },
       bullCase: parsed.bullCase ?? '',
       bearCase: parsed.bearCase ?? '',
-      financials: parsed.financials ?? [],
+      financials: dedupeFinancials(parsed.financials ?? []),
       redFlags: parsed.redFlags ?? [],
       invalidation: parsed.invalidation ?? '',
       fullReportMd: text,
